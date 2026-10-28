@@ -1,0 +1,49 @@
+---
+import Base from '../../layouts/Base.astro';
+import { exams } from '../../lib/data';
+---
+<Base title="Exams" description="Narqix Academy Foundation and Track exams: rules, pass marks, gate questions and retakes.">
+  <div class="wrap py-10">
+    <h1 class="text-3xl sm:text-4xl">Exams</h1>
+    <p class="mt-3 text-muted max-w-2xl">Online, self-paced and timed. Pass the Foundation Exam and one Track Exam to become <strong class="text-ink">Narqix Academy Pre-Certified</strong>.</p>
+    <div class="mt-6 grid gap-3 sm:grid-cols-3 text-sm">
+      <div class="card p-4"><strong class="block">Pass mark</strong><span class="text-muted">80% of the questions, and every 🔒 gate question correct. One missed gate question is a fail, whatever your total.</span></div>
+      <div class="card p-4"><strong class="block">Timed</strong><span class="text-muted">The clock runs on our server. Your answers save as you go. When time is up, what you saved is graded.</span></div>
+      <div class="card p-4"><strong class="block">Retakes</strong><span class="text-muted">Earliest 2 days after a fail. At most 3 attempts per exam in any 30 days.</span></div>
+    </div>
+    <p class="mt-4 text-sm text-muted">Questions and options are shuffled for every attempt. After grading you see your score and, for each question you missed, the lesson to reread. Correct answers are never shown, so study the pages, not the questions.</p>
+
+    <div class="mt-8 grid gap-4 md:grid-cols-2">
+      {exams.map((e) => (
+        <section id={e.id} class="card p-5 scroll-mt-20" data-exam={e.id}>
+          <div class="flex items-start justify-between gap-3">
+            <h2 class="text-lg">{e.title}</h2>
+            {e.id === 'foundation' && <span class="badge badge-accent">Everyone</span>}
+          </div>
+          <p class="mt-2 text-sm text-muted">{e.total} questions · {e.timeLimitMinutes} minutes · pass {e.passMark}/{e.total} · {e.gateCount} 🔒 gate questions{e.calculator ? ' · calculator allowed' : ''}</p>
+          {e.partRules.map((r) => <p class="mt-1 text-sm text-muted">{r.label}.</p>)}
+          <details class="toggle mt-3">
+            <summary>What it covers</summary>
+            <ul class="text-sm text-muted grid gap-1 pb-3">{e.parts.map((p) => <li>Part {p.n}: {p.name} ({p.count})</li>)}</ul>
+          </details>
+          <div class="mt-4" data-action>
+            <a class="btn btn-primary btn-sm" href={`/exams/take/?exam=${e.id}`}>Start exam</a>
+          </div>
+        </section>
+      ))}
+    </div>
+  </div>
+</Base>
+<script>
+  import { api, loggedIn } from '../../scripts/client';
+  import { examAction } from '../../scripts/exam-status';
+  (async () => {
+    if (!loggedIn()) return;
+    const r = await api('/api/me');
+    if (!r.ok) return;
+    for (const e of r.data.exams) {
+      const box = document.querySelector(`[data-exam="${e.id}"] [data-action]`);
+      if (box) box.innerHTML = examAction(e);
+    }
+  })();
+</script>

@@ -1,0 +1,22 @@
+name = "narqix-academy"
+compatibility_date = "2025-09-01"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "narqix-academy"
+# Replace with the id printed by `npx wrangler d1 create narqix-academy` (see README).
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+# Public Turnstile site key. Secret key is set with `wrangler pages secret put TURNSTILE_SECRET_KEY`.
+TURNSTILE_SITE_KEY = ""
+# Cloudflare Access (Zero Trust) settings for /admin. See README "Admin dashboard".
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
+ADMIN_EMAILS = "afreed@narqix.com,ayman.360va@gmail.com,hiring@narqix.com"
+# Email login codes via Resend (free tier). Leave empty to use phone + password login.
+# RESEND_API_KEY is a secret; EMAIL_FROM must be on a domain verified in Resend.
+EMAIL_FROM = ""
+SITE_URL = "https://academy.narqix.com"

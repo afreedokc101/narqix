@@ -1,0 +1,95 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="My dashboard" noindex>
+  <div class="wrap py-10" data-dash>
+    <p class="text-muted" data-loading>Loading your dashboard…</p>
+    <div data-content hidden>
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="eyebrow">My dashboard</p>
+          <h1 class="mt-2 text-3xl" data-name></h1>
+          <p class="text-muted mt-1" data-meta></p>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-logout>Log out</button>
+      </div>
+      <div class="notice notice-ok mt-6" data-welcome hidden>Welcome to Narqix Academy. Start with <a href="/learn/start-here/">Start Here</a>, then follow your track's learning path.</div>
+
+      <section class="mt-8 grid gap-4 lg:grid-cols-3">
+        <div class="card p-5 lg:col-span-2">
+          <h2 class="text-lg">Your learning path</h2>
+          <div class="flex justify-between text-sm mt-3"><span data-track></span><span class="text-muted" data-count></span></div>
+          <div class="bar mt-2"><span data-bar style="width:0%"></span></div>
+          <p class="mt-4 flex flex-wrap gap-2"><a class="btn btn-primary btn-sm" data-path-link href="/learn/">Continue learning</a> <a class="btn btn-ghost btn-sm" href="/learn/">All lessons</a></p>
+        </div>
+        <div class="card p-5">
+          <h2 class="text-lg">Certificate</h2>
+          <div data-certs class="mt-3 grid gap-3"></div>
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-xl">Your exams</h2>
+        <p class="text-sm text-muted mt-1">Pass the Foundation Exam and your Track Exam to become Pre-Certified. Retakes: 2 days after a fail, at most 3 attempts per exam in 30 days.</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2" data-exams></div>
+        <p class="mt-4 text-sm"><a href="/exams/">See every exam, including other tracks</a></p>
+      </section>
+    </div>
+  </div>
+</Base>
+<script>
+  import { api, esc, fmtDate } from '../../scripts/client';
+  import { examAction } from '../../scripts/exam-status';
+
+  (async () => {
+    const r = await api('/api/me');
+    if (r.status === 401) return (location.href = '/login/?next=/dashboard/');
+    if (!r.ok) return ((document.querySelector('[data-loading]') as HTMLElement).textContent = 'Could not load your dashboard. Refresh to try again.');
+    const { candidate: c, progress: p, exams, certificates } = r.data;
+    document.querySelector('[data-loading]')!.remove();
+    (document.querySelector('[data-content]') as HTMLElement).hidden = false;
+    if (new URLSearchParams(location.search).has('welcome')) (document.querySelector('[data-welcome]') as HTMLElement).hidden = false;
+    document.querySelector('[data-name]')!.textContent = c.fullName;
+    document.querySelector('[data-meta]')!.textContent = `${c.trackTitle} track · ${c.district} · ${c.phone}`;
+    const pct = p.trackTotal ? Math.round((p.trackRead / p.trackTotal) * 100) : 0;
+    document.querySelector('[data-track]')!.textContent = `${c.trackTitle}`;
+    document.querySelector('[data-count]')!.textContent = `${p.trackRead}/${p.trackTotal} pages · ${pct}%`;
+    (document.querySelector('[data-bar]') as HTMLElement).style.width = pct + '%';
+    (document.querySelector('[data-path-link]') as HTMLAnchorElement).href = `/tracks/${c.track}/`;
+
+    const certBox = document.querySelector('[data-certs]') as HTMLElement;
+    if (certificates.length) {
+      certBox.innerHTML = certificates.map((x: any) => `
+        <div class="rounded-xl border border-success/40 bg-success/5 p-4">
+          <span class="badge badge-pass">Pre-Certified</span>
+          <p class="mt-2 font-display font-bold">${esc(x.trackTitle)}</p>
+          <p class="text-xs text-muted mt-1">${esc(x.id)} · ${fmtDate(x.issued_at)}</p>
+          <p class="mt-3 flex flex-wrap gap-2"><a class="btn btn-ghost btn-sm" href="/verify/${esc(x.id)}">Public page</a>
+          <button class="btn btn-primary btn-sm" data-pdf="${esc(x.id)}">Download PDF</button></p>
+        </div>`).join('');
+      certBox.addEventListener('click', async (e) => {
+        const b = (e.target as HTMLElement).closest('[data-pdf]') as HTMLButtonElement | null;
+        if (!b) return;
+        b.disabled = true;
+        const v = await api(`/api/verify/${b.dataset.pdf}`);
+        if (v.ok) await (await import('../../scripts/certificate-pdf')).downloadCertificate(v.data);
+        b.disabled = false;
+      });
+    } else {
+      const f = exams.find((e: any) => e.id === 'foundation');
+      const t = exams.find((e: any) => e.track === c.track);
+      const tick = (e: any) => (e?.eligibility.status === 'passed' ? '✓' : '○');
+      certBox.innerHTML = `<p class="text-sm text-muted">Not yet. You need:</p>
+        <ul class="text-sm grid gap-1"><li>${tick(f)} Foundation Exam</li><li>${tick(t)} ${esc(c.trackTitle)} Track Exam</li></ul>`;
+    }
+
+    const mine = exams.filter((e: any) => e.id === 'foundation' || e.track === c.track || e.attempts.length);
+    document.querySelector('[data-exams]')!.innerHTML = mine.map((e: any) => `
+      <div class="card p-5"><h3 class="text-base">${esc(e.title)}</h3><div class="mt-3">${examAction(e)}</div></div>`).join('');
+
+    document.querySelector('[data-logout]')!.addEventListener('click', async () => {
+      await api('/api/auth/logout', {});
+      location.href = '/';
+    });
+  })();
+</script>

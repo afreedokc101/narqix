@@ -1,0 +1,96 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Log in" description="Log in to Narqix Academy.">
+  <div class="wrap-narrow py-10 max-w-md">
+    <h1 class="text-3xl">Log in</h1>
+
+    <form class="mt-8 grid gap-5" data-email-form hidden novalidate>
+      <p class="text-muted text-sm">We will email you a 6-digit code.</p>
+      <div class="field">
+        <label for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" autocomplete="email" required />
+      </div>
+      <div class="field" data-code-field hidden>
+        <label for="code">6-digit code</label>
+        <input class="input tracking-[.4em] text-lg" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" />
+        <span class="hint">Check your inbox and spam folder. The code expires in 10 minutes.</span>
+      </div>
+      <div class="notice" data-msg hidden role="status"></div>
+      <button class="btn btn-primary" type="submit">Email me a code</button>
+      <button class="btn btn-ghost" type="button" data-to-phone>Use phone and password instead</button>
+    </form>
+
+    <form class="mt-8 grid gap-5" data-phone-form novalidate>
+      <div class="field">
+        <label for="phone">Mobile number</label>
+        <input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01712345678" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required />
+      </div>
+      <div class="notice notice-error" data-msg hidden role="alert"></div>
+      <button class="btn btn-primary" type="submit">Log in</button>
+      <button class="btn btn-ghost" type="button" data-to-email hidden>Get a code by email instead</button>
+    </form>
+    <p class="mt-6 text-sm text-muted">New here? <a href="/signup/">Create a free account</a></p>
+  </div>
+</Base>
+<script>
+  import { api, siteConfig } from '../scripts/client';
+  const emailForm = document.querySelector('[data-email-form]') as HTMLFormElement;
+  const phoneForm = document.querySelector('[data-phone-form]') as HTMLFormElement;
+  const next = new URLSearchParams(location.search).get('next');
+  const go = () => (location.href = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard/');
+  const msg = (form: HTMLElement, text: string, kind: 'error' | 'ok' | '' = 'error') => {
+    const el = form.querySelector('[data-msg]') as HTMLElement;
+    el.textContent = text;
+    el.className = `notice ${kind ? 'notice-' + kind : ''}`;
+    el.hidden = !text;
+  };
+
+  siteConfig().then((c) => {
+    if (!c.emailLogin) return;
+    emailForm.hidden = false;
+    phoneForm.hidden = true;
+    (phoneForm.querySelector('[data-to-email]') as HTMLElement).hidden = false;
+  });
+  document.querySelector('[data-to-phone]')!.addEventListener('click', () => { emailForm.hidden = true; phoneForm.hidden = false; });
+  document.querySelector('[data-to-email]')!.addEventListener('click', () => { emailForm.hidden = false; phoneForm.hidden = true; });
+
+  let codeSent = false;
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = emailForm.querySelector('button[type=submit]') as HTMLButtonElement;
+    const email = (emailForm.elements.namedItem('email') as HTMLInputElement).value;
+    btn.disabled = true;
+    if (!codeSent) {
+      const r = await api('/api/auth/request-code', { email });
+      btn.disabled = false;
+      if (!r.ok) return msg(emailForm, r.data.error || 'Could not send a code.');
+      codeSent = true;
+      (emailForm.querySelector('[data-code-field]') as HTMLElement).hidden = false;
+      btn.textContent = 'Log in';
+      msg(emailForm, 'If this email has an account, a code is on its way.', 'ok');
+      (emailForm.elements.namedItem('code') as HTMLInputElement).focus();
+      return;
+    }
+    const code = (emailForm.elements.namedItem('code') as HTMLInputElement).value;
+    const r = await api('/api/auth/verify-code', { email, code });
+    btn.disabled = false;
+    if (r.ok) return go();
+    msg(emailForm, r.data.error || 'That code did not work.');
+  });
+
+  phoneForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = phoneForm.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+    const data = Object.fromEntries(new FormData(phoneForm));
+    const r = await api('/api/auth/login', data);
+    btn.disabled = false;
+    if (r.ok) return go();
+    msg(phoneForm, r.data.error || 'Could not log in.');
+  });
+</script>

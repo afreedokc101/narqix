@@ -1,0 +1,413 @@
+[
+ {
+  "id": "foundation",
+  "title": "Foundation Exam",
+  "track": null,
+  "total": 40,
+  "passMark": 32,
+  "passPercent": 80,
+  "gateCount": 12,
+  "timeLimitMinutes": 50,
+  "parts": [
+   {
+    "n": 1,
+    "name": "Start Here",
+    "count": 8
+   },
+   {
+    "n": 2,
+    "name": "Narqix Standards",
+    "count": 24
+   },
+   {
+    "n": 3,
+    "name": "Core Skills",
+    "count": 8
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": false
+ },
+ {
+  "id": "real-estate",
+  "title": "Real Estate Track Exam",
+  "track": "real-estate",
+  "total": 50,
+  "passMark": 40,
+  "passPercent": 80,
+  "gateCount": 7,
+  "timeLimitMinutes": 75,
+  "parts": [
+   {
+    "n": 1,
+    "name": "How a deal moves",
+    "count": 7
+   },
+   {
+    "n": 2,
+    "name": "Cold Caller and SMS Agent",
+    "count": 8
+   },
+   {
+    "n": 3,
+    "name": "Lead Manager and HOMEKEY discovery",
+    "count": 7
+   },
+   {
+    "n": 4,
+    "name": "Acquisitions",
+    "count": 8
+   },
+   {
+    "n": 5,
+    "name": "Dispositions",
+    "count": 5
+   },
+   {
+    "n": 6,
+    "name": "Underwriting, repairs and offers",
+    "count": 15
+   }
+  ],
+  "roles": [
+   {
+    "id": "cold-caller",
+    "label": "Cold Caller"
+   },
+   {
+    "id": "sms-agent",
+    "label": "SMS Agent"
+   },
+   {
+    "id": "lead-manager",
+    "label": "Lead Manager"
+   },
+   {
+    "id": "acquisitions",
+    "label": "Acquisitions Manager"
+   },
+   {
+    "id": "dispositions",
+    "label": "Dispositions Manager"
+   },
+   {
+    "id": "data-list",
+    "label": "Data and List Team"
+   }
+  ],
+  "partRules": [
+   {
+    "part": 6,
+    "min": 12,
+    "roles": [
+     "acquisitions",
+     "dispositions"
+    ],
+    "label": "Acquisitions and Dispositions candidates need at least 12 of 15 in Part 6"
+   }
+  ],
+  "calculator": true
+ },
+ {
+  "id": "transaction-coordination",
+  "title": "Transaction Coordination Track Exam",
+  "track": "transaction-coordination",
+  "total": 40,
+  "passMark": 32,
+  "passPercent": 80,
+  "gateCount": 4,
+  "timeLimitMinutes": 60,
+  "parts": [
+   {
+    "n": 1,
+    "name": "The role, timeline and cadence",
+    "count": 10
+   },
+   {
+    "n": 2,
+    "name": "Title, deposits and escalation",
+    "count": 10
+   },
+   {
+    "n": 3,
+    "name": "Signing, forms and file standards",
+    "count": 10
+   },
+   {
+    "n": 4,
+    "name": "Settlement statements",
+    "count": 7
+   },
+   {
+    "n": 5,
+    "name": "Fire drills",
+    "count": 3
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": true
+ },
+ {
+  "id": "solar",
+  "title": "Solar Track Exam",
+  "track": "solar",
+  "total": 35,
+  "passMark": 28,
+  "passPercent": 80,
+  "gateCount": 7,
+  "timeLimitMinutes": 50,
+  "parts": [
+   {
+    "n": 1,
+    "name": "The business and the setter seat",
+    "count": 9
+   },
+   {
+    "n": 2,
+    "name": "Qualification and codes",
+    "count": 10
+   },
+   {
+    "n": 3,
+    "name": "Confirming, transfers and nurture",
+    "count": 8
+   },
+   {
+    "n": 4,
+    "name": "Compliance and QA",
+    "count": 8
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": false
+ },
+ {
+  "id": "hvac-home-services",
+  "title": "HVAC & Home Services Track Exam",
+  "track": "hvac-home-services",
+  "total": 35,
+  "passMark": 28,
+  "passPercent": 80,
+  "gateCount": 9,
+  "timeLimitMinutes": 50,
+  "parts": [
+   {
+    "n": 1,
+    "name": "Safety and emergencies",
+    "count": 7
+   },
+   {
+    "n": 2,
+    "name": "Booking and the CSR seat",
+    "count": 8
+   },
+   {
+    "n": 3,
+    "name": "Priority and dispatch",
+    "count": 6
+   },
+   {
+    "n": 4,
+    "name": "Follow-up, memberships and reviews",
+    "count": 8
+   },
+   {
+    "n": 5,
+    "name": "Roofing and outbound compliance",
+    "count": 6
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": false
+ },
+ {
+  "id": "property-preservation",
+  "title": "Property Preservation Track Exam",
+  "track": "property-preservation",
+  "total": 35,
+  "passMark": 28,
+  "passPercent": 80,
+  "gateCount": 5,
+  "timeLimitMinutes": 50,
+  "parts": [
+   {
+    "n": 1,
+    "name": "The business and the order lifecycle",
+    "count": 8
+   },
+   {
+    "n": 2,
+    "name": "Photo QC",
+    "count": 8
+   },
+   {
+    "n": 3,
+    "name": "Bids and invoices",
+    "count": 7
+   },
+   {
+    "n": 4,
+    "name": "Processing and the desk",
+    "count": 6
+   },
+   {
+    "n": 5,
+    "name": "Vendor network and onboarding",
+    "count": 6
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": true
+ },
+ {
+  "id": "strategic-funding",
+  "title": "Strategic Funding Track Exam",
+  "track": "strategic-funding",
+  "total": 35,
+  "passMark": 28,
+  "passPercent": 80,
+  "gateCount": 6,
+  "timeLimitMinutes": 60,
+  "parts": [
+   {
+    "n": 1,
+    "name": "The business and the three rules",
+    "count": 7
+   },
+   {
+    "n": 2,
+    "name": "Qualification and documents",
+    "count": 7
+   },
+   {
+    "n": 3,
+    "name": "Integrity and compliance",
+    "count": 5
+   },
+   {
+    "n": 4,
+    "name": "Bank statement math problem",
+    "count": 6
+   },
+   {
+    "n": 5,
+    "name": "The scrub and the summary",
+    "count": 10
+   }
+  ],
+  "roles": [
+   {
+    "id": "lead-qualifier",
+    "label": "Lead Qualifier"
+   },
+   {
+    "id": "application-assistant",
+    "label": "Application Assistant and Document Chaser"
+   },
+   {
+    "id": "processor",
+    "label": "Funding Processor and File Analyst"
+   },
+   {
+    "id": "renewal-rep",
+    "label": "Renewal and Follow-Up Rep"
+   }
+  ],
+  "partRules": [
+   {
+    "part": 4,
+    "min": 5,
+    "roles": [
+     "processor"
+    ],
+    "label": "Processors need at least 5 of 6 in Part 4"
+   }
+  ],
+  "calculator": true
+ },
+ {
+  "id": "back-office",
+  "title": "Back Office Track Exam",
+  "track": "back-office",
+  "total": 30,
+  "passMark": 24,
+  "passPercent": 80,
+  "gateCount": 6,
+  "timeLimitMinutes": 45,
+  "parts": [
+   {
+    "n": 1,
+    "name": "Inbox and calendar",
+    "count": 7
+   },
+   {
+    "n": 2,
+    "name": "Data entry and bookkeeping support",
+    "count": 7
+   },
+   {
+    "n": 3,
+    "name": "CRM administration",
+    "count": 6
+   },
+   {
+    "n": 4,
+    "name": "Research and recruiting",
+    "count": 5
+   },
+   {
+    "n": 5,
+    "name": "Documents, records and reports",
+    "count": 5
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": true
+ },
+ {
+  "id": "customer-support",
+  "title": "Customer Support Track Exam",
+  "track": "customer-support",
+  "total": 30,
+  "passMark": 24,
+  "passPercent": 80,
+  "gateCount": 5,
+  "timeLimitMinutes": 45,
+  "parts": [
+   {
+    "n": 1,
+    "name": "Tickets and triage",
+    "count": 7
+   },
+   {
+    "n": 2,
+    "name": "Writing and de-escalation",
+    "count": 7
+   },
+   {
+    "n": 3,
+    "name": "Refunds and exceptions",
+    "count": 6
+   },
+   {
+    "n": 4,
+    "name": "Phone, security and etiquette",
+    "count": 5
+   },
+   {
+    "n": 5,
+    "name": "Quality and KPIs",
+    "count": 5
+   }
+  ],
+  "roles": null,
+  "partRules": [],
+  "calculator": false
+ }
+]

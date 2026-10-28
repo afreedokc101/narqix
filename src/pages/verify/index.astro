@@ -1,0 +1,22 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Verify a certificate" description="Check that a Narqix Academy Pre-Certified certificate is genuine.">
+  <div class="wrap-narrow py-10 max-w-lg">
+    <h1 class="text-3xl">Verify a certificate</h1>
+    <p class="mt-2 text-muted">Enter the certificate ID printed on the certificate, for example NQX-7K3M-Q9TD.</p>
+    <form class="mt-6 flex gap-2" data-form>
+      <label for="cid" class="sr-only">Certificate ID</label>
+      <input id="cid" class="input uppercase" name="id" placeholder="NQX-XXXX-XXXX" autocomplete="off" required />
+      <button class="btn btn-primary" type="submit">Verify</button>
+    </form>
+  </div>
+</Base>
+<script>
+  const form = document.querySelector('[data-form]') as HTMLFormElement;
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = (form.elements.namedItem('id') as HTMLInputElement).value.trim().toUpperCase().replace(/\s+/g, '');
+    if (id) location.href = `/verify/${encodeURIComponent(id)}`;
+  });
+</script>

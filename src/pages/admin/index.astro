@@ -1,0 +1,108 @@
+---
+import Base from '../../layouts/Base.astro';
+import { trackList } from '../../lib/data';
+---
+<Base title="Hiring team" noindex>
+  <div class="wrap py-8" data-admin>
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="eyebrow">Hiring team</p>
+        <h1 class="mt-1 text-3xl">Candidates</h1>
+        <p class="text-sm text-muted mt-1" data-who></p>
+      </div>
+      <a class="btn btn-ghost btn-sm" data-csv href="/api/admin/export">Export CSV</a>
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-5 items-end">
+      <div class="field"><label for="f-track">Track</label>
+        <select id="f-track" class="input"><option value="">All tracks</option>{trackList.map((t) => <option value={t.key}>{t.title}</option>)}</select></div>
+      <div class="field"><label for="f-cert">Certificate</label>
+        <select id="f-cert" class="input"><option value="">Any</option><option value="Pre-Certified">Pre-Certified</option><option value="Foundation passed">Foundation passed</option><option value="In progress">In progress</option><option value="Not started">Not started</option></select></div>
+      <div class="field"><label for="f-status">Hiring status</label>
+        <select id="f-status" class="input"><option value="">Any</option><option value="new">New</option><option value="contacted">Contacted</option><option value="interview">Interview</option><option value="hired">Hired</option></select></div>
+      <div class="field"><label for="f-q">Search</label><input id="f-q" class="input" placeholder="Name, phone, email, district" /></div>
+      <div class="field"><label for="f-sort">Sort</label>
+        <select id="f-sort" class="input"><option value="cert">Pre-Certified first</option><option value="new">Newest first</option><option value="progress">Most progress</option></select></div>
+    </div>
+    <p class="mt-4 text-sm text-muted" data-count>Loading…</p>
+    <div class="notice notice-error mt-4" data-error hidden></div>
+
+    <div class="mt-3 overflow-x-auto card">
+      <table class="w-full text-sm">
+        <thead class="text-left text-muted bg-surface-2">
+          <tr>
+            <th class="p-3 font-semibold">Candidate</th>
+            <th class="p-3 font-semibold">Contact</th>
+            <th class="p-3 font-semibold">Track</th>
+            <th class="p-3 font-semibold">Progress</th>
+            <th class="p-3 font-semibold">Exams</th>
+            <th class="p-3 font-semibold">Certificate</th>
+            <th class="p-3 font-semibold">Status</th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+  </div>
+</Base>
+<script>
+  import { api, esc, fmtDate } from '../../scripts/client';
+  const STATUSES = [['new', 'New'], ['contacted', 'Contacted'], ['interview', 'Interview'], ['hired', 'Hired']];
+  let rows: any[] = [];
+  const $ = (s: string) => document.querySelector(s) as HTMLInputElement;
+
+  function render() {
+    const track = $('#f-track').value, cert = $('#f-cert').value, status = $('#f-status').value, q = $('#f-q').value.toLowerCase().trim(), sort = $('#f-sort').value;
+    let list = rows.filter((r) => (!track || r.track === track) && (!cert || r.certificateStatus === cert) && (!status || r.hiringStatus === status) &&
+      (!q || [r.fullName, r.phone, r.email, r.district].join(' ').toLowerCase().includes(q)));
+    list = list.sort((a, b) =>
+      sort === 'progress' ? b.progressPct - a.progressPct
+      : sort === 'new' ? b.createdAt - a.createdAt
+      : Number(b.preCertified) - Number(a.preCertified) || b.progressPct - a.progressPct || b.createdAt - a.createdAt);
+    document.querySelector('[data-count]')!.textContent = `${list.length} of ${rows.length} candidates`;
+    const csv = new URLSearchParams();
+    if (track) csv.set('track', track);
+    if (status) csv.set('status', status);
+    (document.querySelector('[data-csv]') as HTMLAnchorElement).href = '/api/admin/export' + (csv.toString() ? '?' + csv : '');
+    document.querySelector('[data-rows]')!.innerHTML = list.map((r) => `
+      <tr class="border-t border-line align-top">
+        <td class="p-3"><strong>${esc(r.fullName)}</strong><div class="text-xs text-muted">${esc(r.district)} · joined ${fmtDate(r.createdAt)}</div>
+          ${r.cvUrl ? `<a class="text-xs" href="${esc(r.cvUrl)}" rel="noopener noreferrer" target="_blank">CV</a>` : ''}</td>
+        <td class="p-3 whitespace-nowrap"><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><div class="text-xs"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></div></td>
+        <td class="p-3">${esc(r.trackTitle)}</td>
+        <td class="p-3 min-w-28"><span class="tabular-nums">${r.progressPct}%</span><div class="bar mt-1"><span style="width:${r.progressPct}%"></span></div><div class="text-xs text-muted">${r.lessonsRead}/${r.lessonsTotal}</div></td>
+        <td class="p-3 min-w-48">${r.exams.length ? r.exams.map((e: any) => `<div class="text-xs"><span class="text-ink">${esc(e.title.replace(' Track Exam', '').replace(' Exam', ''))}</span>: ${e.attempts.map((x: any) => x.status === 'in_progress' ? '<span class="text-muted">in progress</span>' : `<span class="${x.status === 'passed' ? 'text-success' : 'text-alert'}">${x.score}/${x.total}</span>`).join(', ')}</div>`).join('') : '<span class="text-xs text-muted">None</span>'}</td>
+        <td class="p-3">${r.preCertified ? r.certificates.filter((c: any) => c.status === 'valid').map((c: any) => `<span class="badge badge-pass">Pre-Certified</span><div class="text-xs mt-1"><a href="/verify/${esc(c.id)}">${esc(c.id)}</a> · ${esc(c.trackTitle)}</div>`).join('') : `<span class="text-xs text-muted">${esc(r.certificateStatus)}</span>`}</td>
+        <td class="p-3"><div class="flex flex-wrap gap-1" role="group" aria-label="Hiring status">${STATUSES.map(([v, l]) =>
+          `<button class="btn btn-sm ${r.hiringStatus === v ? 'btn-primary' : 'btn-ghost'}" data-id="${esc(r.id)}" data-status="${v}" aria-pressed="${r.hiringStatus === v}">${l}</button>`).join('')}</div></td>
+      </tr>`).join('');
+  }
+
+  document.querySelector('[data-rows]')!.addEventListener('click', async (e) => {
+    const b = (e.target as HTMLElement).closest('[data-status]') as HTMLButtonElement | null;
+    if (!b) return;
+    b.disabled = true;
+    const r = await api(`/api/admin/candidates/${b.dataset.id}/status`, { status: b.dataset.status });
+    b.disabled = false;
+    if (!r.ok) return alert(r.data.error || 'Could not update status');
+    const row = rows.find((x) => x.id === b.dataset.id);
+    if (row) row.hiringStatus = b.dataset.status;
+    render();
+  });
+  for (const id of ['#f-track', '#f-cert', '#f-status', '#f-sort']) $(id).addEventListener('change', render);
+  $('#f-q').addEventListener('input', render);
+
+  (async () => {
+    const r = await api('/api/admin/candidates');
+    if (!r.ok) {
+      const el = document.querySelector('[data-error]') as HTMLElement;
+      el.textContent = r.data.error || 'Could not load candidates.';
+      el.hidden = false;
+      document.querySelector('[data-count]')!.textContent = '';
+      return;
+    }
+    rows = r.data.candidates;
+    document.querySelector('[data-who]')!.textContent = `Signed in as ${r.data.admin}`;
+    render();
+  })();
+</script>

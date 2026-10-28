@@ -1,0 +1,76 @@
+---
+import Base from '../layouts/Base.astro';
+import { trackList, TRACK_BLURBS, exams } from '../lib/data';
+
+const steps = [
+  { n: '1', title: 'Study', body: 'Work through Start Here, the Narqix Standards, Core Skills and your track. Free, self-paced, built for your phone.' },
+  { n: '2', title: 'Pass your exams', body: 'Take the Foundation Exam and your Track Exam online. 80% to pass, and every 🔒 gate question must be right.' },
+  { n: '3', title: 'Get your certificate', body: 'Pass both and you are Narqix Pre-Certified, with a certificate ID anyone can verify.' },
+];
+const foundation = exams.find((e) => e.id === 'foundation')!;
+---
+<Base title="Narqix Academy">
+  <section class="relative overflow-hidden border-b border-line">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true" style="background: radial-gradient(60rem 30rem at 85% -10%, rgb(139 140 255 / .18), transparent 60%);"></div>
+    <div class="wrap relative py-14 sm:py-24">
+      <p class="eyebrow mb-4">Narqix Hiring Hub · Bangladesh</p>
+      <h1 class="font-display font-extrabold text-4xl sm:text-6xl max-w-3xl">Become Narqix Pre-Certified. <span class="text-accent">Get called first.</span></h1>
+      <p class="mt-5 text-lg text-muted max-w-2xl">Learn the standards Narqix teams work to every day, pass the written exams, and earn a certificate the Narqix hiring team trusts.</p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="/signup/" data-auth="out" class="btn btn-primary">Start free</a>
+        <a href="/dashboard/" data-auth="in" hidden class="btn btn-primary">Continue learning</a>
+        <a href="/learn/" class="btn btn-ghost">Browse the lessons</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap py-14" aria-labelledby="how">
+    <h2 id="how" class="text-2xl sm:text-3xl">How it works</h2>
+    <ol class="mt-6 grid gap-4 sm:grid-cols-3">
+      {steps.map((s) => (
+        <li class="card p-5">
+          <span class="grid place-items-center h-9 w-9 rounded-full bg-accent text-accent-ink font-display font-extrabold">{s.n}</span>
+          <h3 class="mt-4 text-lg">{s.title}</h3>
+          <p class="mt-2 text-sm text-muted">{s.body}</p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="wrap pb-14" aria-labelledby="tracks">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 id="tracks" class="text-2xl sm:text-3xl">Choose your track</h2>
+        <p class="mt-2 text-muted">Everyone takes the Foundation Exam ({foundation.total} questions). Then pick the industry you want to work in.</p>
+      </div>
+    </div>
+    <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {trackList.map((t) => {
+        const exam = exams.find((e) => e.track === t.key);
+        return (
+          <li>
+            <a href={`/tracks/${t.key}/`} class="card p-5 h-full flex flex-col no-underline text-ink hover:border-accent transition-colors">
+              <h3 class="text-lg">{t.title}</h3>
+              <p class="mt-2 text-sm text-muted flex-1">{TRACK_BLURBS[t.key]}</p>
+              <p class="mt-4 text-xs text-faint">{t.lessonIds.length} lessons · {exam?.total} question exam</p>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </section>
+
+  <section class="wrap pb-6" aria-labelledby="why">
+    <div class="card p-6 sm:p-10 grid gap-6 sm:grid-cols-[1.4fr_1fr] items-center" style="background: linear-gradient(135deg, rgb(139 140 255 / .12), transparent 60%), var(--color-surface);">
+      <div>
+        <h2 id="why" class="text-2xl sm:text-3xl">Certified candidates are called first</h2>
+        <p class="mt-3 text-muted">When the Narqix hiring team has a new role to fill, Pre-Certified candidates are the first people we reach out to. Your certificate shows we already know you understand the Narqix Standards and your track, so you skip straight to the conversation that matters.</p>
+        <p class="mt-3 text-sm text-faint">Pre-certification covers the written Foundation and Track exams. Role-play and live certification are completed after hiring.</p>
+      </div>
+      <div class="flex flex-col gap-3">
+        <a href="/signup/" data-auth="out" class="btn btn-primary">Create your free account</a>
+        <a href="https://www.facebook.com/narqixhiringhub" rel="noopener" class="btn btn-ghost">Follow Narqix Hiring Hub on Facebook</a>
+      </div>
+    </div>
+  </section>
+</Base>

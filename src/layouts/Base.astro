@@ -1,0 +1,89 @@
+---
+import fs from 'node:fs';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  noindex?: boolean;
+  wide?: boolean;
+}
+const { title, description = 'Free training and pre-certification for Narqix Hiring Hub candidates in Bangladesh. Study, pass your exams, get your certificate and get called first.', noindex = false } = Astro.props;
+const hasLogo = fs.existsSync(new URL('../../public/logo.png', import.meta.url));
+const fullTitle = title === 'Narqix Academy' ? title : `${title} · Narqix Academy`;
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/learn/', label: 'Learn' },
+  { href: '/exams/', label: 'Exams' },
+  { href: '/verify/', label: 'Verify' },
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#07070c" />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="canonical" href={new URL(path, Astro.site)} />
+    <link rel="icon" href={hasLogo ? '/logo.png' : '/favicon.svg'} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {hasLogo && <meta property="og:image" content={new URL('/logo.png', Astro.site)} />}
+  </head>
+  <body class="min-h-dvh flex flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 btn btn-primary">Skip to content</a>
+    <header class="border-b border-line bg-bg/95 sm:sticky top-0 z-40 backdrop-blur">
+      <div class="wrap flex items-center gap-3 h-14">
+        <a href="/" class="flex items-center gap-2 no-underline text-ink shrink-0">
+          {hasLogo ? (
+            <img src="/logo.png" alt="" width="28" height="28" class="h-7 w-7 object-contain" />
+          ) : (
+            <span class="grid place-items-center h-7 w-7 rounded-md bg-accent text-accent-ink font-display font-extrabold text-sm" aria-hidden="true">N</span>
+          )}
+          <span class="font-display font-bold tracking-tight">Narqix <span class="text-accent">Academy</span></span>
+        </a>
+        <nav class="ml-auto flex items-center gap-1 text-sm" aria-label="Main">
+          {nav.map((n) => (
+            <a href={n.href} class:list={['hidden sm:inline-flex px-3 py-2 rounded-lg no-underline hover:text-ink', path.startsWith(n.href) ? 'text-ink' : 'text-muted']}>{n.label}</a>
+          ))}
+          <a href="/login/" data-auth="out" class="btn btn-ghost btn-sm">Log in</a>
+          <a href="/signup/" data-auth="out" class="btn btn-primary btn-sm hidden min-[380px]:inline-flex">Sign up</a>
+          <a href="/dashboard/" data-auth="in" hidden class="btn btn-primary btn-sm">My dashboard</a>
+        </nav>
+      </div>
+      <nav class="sm:hidden border-t border-line" aria-label="Main mobile">
+        <div class="wrap flex gap-1 text-sm py-1">
+          {nav.map((n) => (
+            <a href={n.href} class:list={['flex-1 text-center py-2 rounded-lg no-underline', path.startsWith(n.href) ? 'text-ink bg-surface-2' : 'text-muted']}>{n.label}</a>
+          ))}
+        </div>
+      </nav>
+    </header>
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <footer class="border-t border-line mt-16">
+      <div class="wrap py-8 flex flex-col sm:flex-row gap-4 sm:items-center justify-between text-sm text-muted">
+        <p>© Narqix Academy</p>
+        <div class="flex flex-wrap gap-x-5 gap-y-2">
+          <a href="https://www.facebook.com/narqixhiringhub" rel="noopener" class="no-underline text-muted hover:text-ink">Narqix Hiring Hub on Facebook</a>
+          <a href="/verify/" class="no-underline text-muted hover:text-ink">Verify a certificate</a>
+          <a href="https://narqix.com/" rel="noopener" class="no-underline text-muted hover:text-ink">narqix.com</a>
+        </div>
+      </div>
+    </footer>
+    <script is:inline>
+      // Swap Log in / Dashboard links without an API call (nq_auth is a non-secret flag cookie).
+      (function () {
+        var on = /(?:^|;\s*)nq_auth=1/.test(document.cookie);
+        document.querySelectorAll('[data-auth]').forEach(function (el) {
+          el.hidden = (el.getAttribute('data-auth') === 'in') !== on;
+        });
+      })();
+    </script>
+  </body>
+</html>

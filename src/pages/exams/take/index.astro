@@ -1,0 +1,331 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { exams } from '../../../lib/data';
+---
+<Base title="Exam" noindex>
+  <div class="wrap-narrow py-6 sm:py-10" data-app>
+    <p class="text-muted" data-loading>Loading…</p>
+
+    <!-- Intro: rules + role + start -->
+    <section data-view="intro" hidden>
+      <p class="eyebrow">Before you start</p>
+      <h1 class="mt-2 text-3xl" data-i="title"></h1>
+      <ul class="mt-5 grid gap-2 text-sm text-muted list-disc pl-5" data-i="rules"></ul>
+      <div class="field mt-6" data-role-field hidden>
+        <label for="role">Which role are you training for?</label>
+        <select class="input" id="role"></select>
+        <span class="hint" data-role-hint></span>
+      </div>
+      <div class="notice mt-6 text-sm">
+        Keep this page open. Your answers save automatically. If your connection drops, come back to this exam from your dashboard before the time runs out.
+      </div>
+      <div class="notice notice-error mt-4" data-i="error" hidden role="alert"></div>
+      <div class="mt-6 flex gap-3"><button class="btn btn-primary" data-start>Start the exam now</button><a class="btn btn-ghost" href="/dashboard/">Not now</a></div>
+    </section>
+
+    <!-- Running exam -->
+    <section data-view="exam" hidden>
+      <div class="sticky top-0 sm:top-14 z-30 -mx-4 px-4 py-3 bg-bg/95 backdrop-blur border-b border-line flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-xs text-muted truncate" data-e="title"></p>
+          <p class="text-sm"><span data-e="pos"></span> · <span class="text-muted" data-e="answered"></span></p>
+        </div>
+        <div class="text-right">
+          <p class="font-display font-bold text-xl tabular-nums" data-e="timer" aria-live="off">--:--</p>
+          <p class="text-xs text-muted" data-e="saved">Saved</p>
+        </div>
+      </div>
+      <div class="mt-6" data-e="question"></div>
+      <div class="mt-6 flex justify-between gap-3">
+        <button class="btn btn-ghost" data-prev>Previous</button>
+        <button class="btn btn-primary" data-next>Next</button>
+      </div>
+      <details class="toggle mt-8">
+        <summary>All questions</summary>
+        <div class="grid grid-cols-8 sm:grid-cols-10 gap-2 pb-3" data-e="grid"></div>
+      </details>
+      <div class="card p-5 mt-6">
+        <h2 class="text-lg">Finish</h2>
+        <p class="text-sm text-muted mt-1" data-e="finish-note"></p>
+        <div class="mt-3" data-turnstile></div>
+        <div class="notice notice-error mt-3" data-e="error" hidden role="alert"></div>
+        <button class="btn btn-primary mt-3" data-submit>Submit for grading</button>
+      </div>
+    </section>
+
+    <!-- Result -->
+    <section data-view="result" hidden>
+      <p class="eyebrow" data-r="exam"></p>
+      <div class="mt-3 flex items-center gap-3 flex-wrap">
+        <h1 class="text-4xl font-extrabold" data-r="score"></h1>
+        <span data-r="badge"></span>
+      </div>
+      <ul class="mt-4 grid gap-1 text-sm" data-r="reasons"></ul>
+      <div class="mt-6 grid gap-2 text-sm" data-r="parts"></div>
+      <div class="mt-8" data-r="reread"></div>
+      <div class="mt-8" data-r="missed"></div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="btn btn-primary" href="/dashboard/">Back to dashboard</a><a class="btn btn-ghost" href="/exams/">All exams</a></div>
+    </section>
+  </div>
+  <script type="application/json" id="exam-meta" set:html={JSON.stringify(exams)}></script>
+</Base>
+
+<script>
+  import { api, esc, fmtDate, mountTurnstile, resetTurnstile } from '../../../scripts/client';
+
+  const META = JSON.parse(document.getElementById('exam-meta')!.textContent || '[]');
+  const params = new URLSearchParams(location.search);
+  const $ = (s: string) => document.querySelector(s) as HTMLElement;
+  const show = (v: string) => {
+    $('[data-loading]').hidden = true;
+    document.querySelectorAll<HTMLElement>('[data-view]').forEach((el) => (el.hidden = el.dataset.view !== v));
+    window.scrollTo(0, 0);
+  };
+  const fail = (msg: string) => {
+    $('[data-loading]').hidden = false;
+    $('[data-loading]').innerHTML = msg;
+  };
+
+  async function boot() {
+    const attemptId = params.get('attempt');
+    if (attemptId) return loadAttempt(attemptId);
+    const examId = params.get('exam') || '';
+    const meta = META.find((e: any) => e.id === examId);
+    if (!meta) return fail('Unknown exam. <a href="/exams/">See all exams</a>.');
+    const me = await api('/api/me');
+    if (me.status === 401) return (location.href = `/login/?next=${encodeURIComponent(location.pathname + location.search)}`);
+    const status = me.data.exams?.find((e: any) => e.id === examId);
+    const el = status?.eligibility;
+    if (el?.status === 'in_progress') return loadAttempt(el.attemptId);
+    if (el?.status === 'passed') return fail(`You have already passed this exam. <a href="/exams/take/?attempt=${esc(el.attemptId)}">See your results</a>.`);
+    if (el?.status === 'locked') return fail(`<strong>Not yet.</strong> ${esc(el.reason)} You can start again ${esc(fmtDate(el.until, true))}. <a href="/dashboard/">Back to dashboard</a>.`);
+    intro(meta);
+  }
+
+  function intro(meta: any) {
+    $('[data-i="title"]').textContent = meta.title;
+    const rules = [
+      `${meta.total} multiple choice questions, one correct answer each.`,
+      `Time limit: ${meta.timeLimitMinutes} minutes. The timer starts when you press Start and does not stop.`,
+      `Pass mark: ${meta.passMark} correct (${meta.passPercent}%), and all ${meta.gateCount} 🔒 gate questions correct. Missing one gate question is a fail.`,
+      ...meta.partRules.map((r: any) => `${r.label}.`),
+      meta.calculator ? 'You may use a calculator and scrap paper.' : 'Work alone. No AI tools, no searching the Academy, no help from anyone.',
+      'Retakes: earliest 2 days after a fail, at most 3 attempts in 30 days.',
+    ];
+    $('[data-i="rules"]').innerHTML = rules.map((r) => `<li>${esc(r)}</li>`).join('');
+    const sel = document.getElementById('role') as HTMLSelectElement;
+    if (meta.roles) {
+      $('[data-role-field]').hidden = false;
+      sel.innerHTML = '<option value="">Choose your role</option>' + meta.roles.map((r: any) => `<option value="${esc(r.id)}">${esc(r.label)}</option>`).join('');
+      $('[data-role-hint]').textContent = meta.partRules.map((r: any) => r.label).join('. ') + '.';
+    }
+    show('intro');
+    $('[data-start]').addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const err = $('[data-i="error"]');
+      err.hidden = true;
+      if (meta.roles && !sel.value) {
+        err.textContent = 'Choose the role you are training for.';
+        err.hidden = false;
+        return;
+      }
+      btn.disabled = true;
+      const r = await api(`/api/exams/${meta.id}/start`, { role: sel.value || undefined });
+      btn.disabled = false;
+      if (!r.ok) {
+        err.textContent = r.data.error || 'Could not start the exam.';
+        err.hidden = false;
+        return;
+      }
+      history.replaceState(null, '', `?attempt=${r.data.attemptId}`);
+      loadAttempt(r.data.attemptId);
+    });
+  }
+
+  async function loadAttempt(id: string) {
+    const r = await api(`/api/attempts/${id}`);
+    if (r.status === 401) return (location.href = `/login/?next=${encodeURIComponent(location.pathname + location.search)}`);
+    if (!r.ok) return fail(esc(r.data.error || 'Could not load this exam.'));
+    if (r.data.status === 'in_progress') return runExam(r.data);
+    showResult(r.data);
+  }
+
+  // ---------------------------------------------------------------- running exam
+  function runExam(a: any) {
+    const qs = a.questions as any[];
+    const answers: Record<string, number> = { ...a.answers };
+    const offset = a.serverNow - Date.now(); // server clock minus local clock
+    let cur = Number(sessionStorage.getItem(`nq-pos-${a.id}`) || 0) || 0;
+    let dirty = false;
+    let saving = false;
+    let submitted = false;
+    const tokenP = mountTurnstile($('[data-turnstile]'));
+    $('[data-e="title"]').textContent = a.examTitle;
+    show('exam');
+
+    const grid = $('[data-e="grid"]');
+    grid.innerHTML = qs.map((q, i) => `<button type="button" class="h-9 rounded-md border border-line text-sm tabular-nums" data-go="${i}" aria-label="Question ${i + 1}">${i + 1}${q.gate ? '<span class="sr-only"> gate</span>' : ''}</button>`).join('');
+    grid.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest('[data-go]') as HTMLElement | null;
+      if (b) go(Number(b.dataset.go));
+    });
+
+    function counts() {
+      const n = Object.keys(answers).length;
+      $('[data-e="answered"]').textContent = `${n} of ${qs.length} answered`;
+      $('[data-e="finish-note"]').textContent = n < qs.length
+        ? `You have ${qs.length - n} unanswered question${qs.length - n > 1 ? 's' : ''}. Unanswered questions count as wrong.`
+        : 'Every question is answered. Check your gate questions once more, then submit.';
+      grid.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => {
+        const i = Number(b.dataset.go);
+        b.style.background = String(i) in answers ? 'rgb(139 140 255 / .18)' : '';
+        b.style.borderColor = i === cur ? 'var(--color-accent)' : '';
+      });
+    }
+
+    function render() {
+      const q = qs[cur];
+      sessionStorage.setItem(`nq-pos-${a.id}`, String(cur));
+      $('[data-e="pos"]').textContent = `Question ${cur + 1} of ${qs.length}`;
+      $('[data-e="question"]').innerHTML = `
+        <p class="text-xs text-muted">${esc(q.part)}</p>
+        ${q.gate ? '<p class="mt-2"><span class="badge badge-fail">🔒 Gate question: must be correct to pass</span></p>' : ''}
+        ${q.contextHtml ? `<details class="toggle mt-3" open><summary>Shared information for this part</summary><div class="q-context text-sm pb-3">${q.contextHtml}</div></details>` : ''}
+        <div class="q-stem mt-3 text-lg leading-relaxed">${q.stemHtml}</div>
+        <fieldset class="mt-5 grid gap-3">
+          <legend class="sr-only">Choose one answer</legend>
+          ${q.options.map((o: string, j: number) => `
+            <label class="opt"><input type="radio" name="q${cur}" value="${j}" ${answers[String(cur)] === j ? 'checked' : ''} />
+            <span><span class="text-muted mr-1">${'ABCD'[j]}.</span> ${o}</span></label>`).join('')}
+        </fieldset>`;
+      ($('[data-prev]') as HTMLButtonElement).disabled = cur === 0;
+      $('[data-next]').textContent = cur === qs.length - 1 ? 'Review' : 'Next';
+      counts();
+    }
+
+    function go(i: number) {
+      cur = Math.max(0, Math.min(qs.length - 1, i));
+      render();
+      $('[data-e="question"]').scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior });
+      window.scrollBy(0, -80);
+    }
+
+    $('[data-e="question"]').addEventListener('change', (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.type !== 'radio') return;
+      answers[String(cur)] = Number(t.value);
+      dirty = true;
+      $('[data-e="saved"]').textContent = 'Saving…';
+      counts();
+      scheduleSave();
+    });
+    $('[data-prev]').addEventListener('click', () => go(cur - 1));
+    $('[data-next]').addEventListener('click', () => {
+      if (cur === qs.length - 1) $('[data-submit]').scrollIntoView({ behavior: 'smooth' });
+      else go(cur + 1);
+    });
+
+    let saveTimer: number | undefined;
+    function scheduleSave(delay = 800) {
+      clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(save, delay);
+    }
+    async function save() {
+      if (!dirty || saving || submitted) return;
+      saving = true;
+      dirty = false;
+      try {
+        const r = await api(`/api/attempts/${a.id}/save`, { answers });
+        if (r.ok) $('[data-e="saved"]').textContent = 'Saved';
+        else if (r.data.closed) return loadAttempt(a.id);
+        else throw new Error();
+      } catch {
+        dirty = true;
+        $('[data-e="saved"]').textContent = 'Offline: retrying';
+        scheduleSave(4000);
+      } finally {
+        saving = false;
+      }
+    }
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty && !submitted) e.preventDefault();
+    });
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && save());
+
+    async function submit(auto = false) {
+      if (submitted) return;
+      const btn = $('[data-submit]') as HTMLButtonElement;
+      const err = $('[data-e="error"]');
+      if (!auto) {
+        const left = qs.length - Object.keys(answers).length;
+        if (left && !confirm(`${left} question${left > 1 ? 's are' : ' is'} unanswered. Submit anyway?`)) return;
+      }
+      btn.disabled = true;
+      err.hidden = true;
+      const turnstileToken = await (await tokenP)();
+      const r = await api(`/api/attempts/${a.id}/submit`, { answers, turnstileToken });
+      if (r.ok) {
+        submitted = true;
+        sessionStorage.removeItem(`nq-pos-${a.id}`);
+        return loadAttempt(a.id);
+      }
+      btn.disabled = false;
+      resetTurnstile();
+      err.textContent = r.data.error || 'Could not submit. Check your connection and try again.';
+      err.hidden = false;
+      if (auto) setTimeout(() => submit(true), 5000);
+    }
+    $('[data-submit]').addEventListener('click', () => submit(false));
+
+    const timerEl = $('[data-e="timer"]');
+    const tick = () => {
+      const left = a.deadlineAt - (Date.now() + offset);
+      if (left <= 0) {
+        timerEl.textContent = '00:00';
+        clearInterval(iv);
+        if (!submitted) submit(true);
+        return;
+      }
+      const s = Math.floor(left / 1000);
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      timerEl.textContent = (h ? `${h}:` : '') + `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+      timerEl.classList.toggle('text-alert', left < 5 * 60_000);
+    };
+    const iv = window.setInterval(tick, 1000);
+    tick();
+    render();
+  }
+
+  // ---------------------------------------------------------------- result
+  function showResult(a: any) {
+    const res = a.result;
+    if (!res) return fail('This attempt has no result.');
+    $('[data-r="exam"]').textContent = `${a.examTitle} · ${fmtDate(a.submittedAt, true)}`;
+    $('[data-r="score"]').textContent = `${res.score}/${res.total}`;
+    $('[data-r="badge"]').innerHTML = res.passed ? '<span class="badge badge-pass text-sm">Passed</span>' : '<span class="badge badge-fail text-sm">Not passed</span>';
+    const lines = res.passed
+      ? [`You scored ${res.score} of ${res.total} (pass mark ${res.passMark}) with every gate question correct.`]
+      : res.reasons;
+    lines.push(`Gate questions correct: ${res.gatesTotal - res.gatesMissed} of ${res.gatesTotal}.`);
+    $('[data-r="reasons"]').innerHTML = lines.map((l: string) => `<li>${esc(l)}</li>`).join('');
+    $('[data-r="parts"]').innerHTML = `<h2 class="text-lg">By part</h2>` + res.parts.map((p: any) => {
+      const pct = p.count ? Math.round((p.right / p.count) * 100) : 0;
+      return `<div><div class="flex justify-between"><span>Part ${p.n}: ${esc(p.name)}</span><span class="text-muted tabular-nums">${p.right}/${p.count}</span></div><div class="bar mt-1"><span style="width:${pct}%"></span></div></div>`;
+    }).join('');
+    if (res.reread.length) {
+      $('[data-r="reread"]').innerHTML = `<h2 class="text-lg">Pages to reread</h2>
+        <ul class="mt-3 grid gap-2">${res.reread.map((s: any) => `<li>${s.url ? `<a class="card px-4 py-3 block no-underline text-ink hover:border-accent" href="${esc(s.url)}">${esc(s.title)}</a>` : `<span class="card px-4 py-3 block">${esc(s.title)}</span>`}</li>`).join('')}</ul>`;
+    }
+    if (res.missed.length) {
+      $('[data-r="missed"]').innerHTML = `<details class="toggle"><summary>Questions you missed (${res.missed.length})</summary>
+        <ol class="grid gap-4 pb-4">${res.missed.map((m: any) => `<li class="border-t border-line pt-3">
+          <p class="text-xs text-muted">Question ${m.number} · ${esc(m.part)} ${m.gate ? '· <span class="text-alert">🔒 gate</span>' : ''}</p>
+          <div class="q-stem mt-1 text-sm">${m.stemHtml}</div>
+          <p class="text-sm mt-2">Reread: ${m.sources.map((s: any) => (s.url ? `<a href="${esc(s.url)}">${esc(s.title)}</a>` : esc(s.title))).join(', ')}</p></li>`).join('')}</ol></details>
+        <p class="mt-3 text-xs text-muted">Correct answers are not shown. Reread the pages and you will find them.</p>`;
+    }
+    show('result');
+  }
+
+  boot();
+</script>

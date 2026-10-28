@@ -1,0 +1,90 @@
+---
+import Base from '../layouts/Base.astro';
+import { trackList } from '../lib/data';
+import { DISTRICTS } from '../lib/districts';
+---
+<Base title="Sign up" description="Create your free Narqix Academy account.">
+  <div class="wrap-narrow py-10 max-w-lg">
+    <h1 class="text-3xl">Create your free account</h1>
+    <p class="mt-2 text-muted">Takes two minutes. The Narqix hiring team sees your progress and calls Pre-Certified candidates first.</p>
+    <form class="mt-8 grid gap-5" novalidate data-form>
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input class="input" id="fullName" name="fullName" autocomplete="name" required maxlength="120" />
+        <span class="err" data-err="fullName"></span>
+      </div>
+      <div class="field">
+        <label for="phone">Mobile number</label>
+        <input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01712345678" required />
+        <span class="hint">Bangladesh number. You will use it to log in.</span>
+        <span class="err" data-err="phone"></span>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" autocomplete="email" required />
+        <span class="err" data-err="email"></span>
+      </div>
+      <div class="field">
+        <label for="district">District or city</label>
+        <input class="input" id="district" name="district" list="districts" autocomplete="address-level2" required />
+        <datalist id="districts">{DISTRICTS.map((d) => <option value={d} />)}</datalist>
+        <span class="err" data-err="district"></span>
+      </div>
+      <div class="field">
+        <label for="track">The track you want</label>
+        <select class="input" id="track" name="track" required>
+          <option value="">Choose a track</option>
+          {trackList.map((t) => <option value={t.key}>{t.title}</option>)}
+        </select>
+        <span class="err" data-err="track"></span>
+      </div>
+      <div class="field">
+        <label for="cvUrl">CV link <span class="text-muted font-normal">(optional)</span></label>
+        <input class="input" id="cvUrl" name="cvUrl" type="url" inputmode="url" placeholder="https://drive.google.com/..." />
+        <span class="hint">A Google Drive, Dropbox or LinkedIn link anyone can open.</span>
+        <span class="err" data-err="cvUrl"></span>
+      </div>
+      <div class="field" data-password>
+        <label for="password">Password</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" />
+        <span class="hint" data-password-hint>At least 8 characters.</span>
+        <span class="err" data-err="password"></span>
+      </div>
+      <div data-turnstile></div>
+      <div class="notice notice-error" data-error hidden role="alert"></div>
+      <button class="btn btn-primary" type="submit">Create account</button>
+      <p class="text-sm text-muted">Already have an account? <a href="/login/">Log in</a></p>
+    </form>
+  </div>
+</Base>
+<script>
+  import { api, mountTurnstile, resetTurnstile, showFieldErrors, siteConfig } from '../scripts/client';
+  const form = document.querySelector('[data-form]') as HTMLFormElement;
+  const errBox = document.querySelector('[data-error]') as HTMLElement;
+  const tokenP = mountTurnstile(document.querySelector('[data-turnstile]') as HTMLElement);
+  const preset = new URLSearchParams(location.search).get('track');
+  if (preset) (form.elements.namedItem('track') as HTMLSelectElement).value = preset;
+  siteConfig().then((c) => {
+    if (c.emailLogin) {
+      (document.querySelector('[data-password-hint]') as HTMLElement).textContent = 'Optional. You can always log in with a code sent to your email.';
+    }
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errBox.hidden = true;
+    const btn = form.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+    const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
+    const turnstileToken = await (await tokenP)();
+    const r = await api('/api/signup', { ...data, turnstileToken });
+    btn.disabled = false;
+    if (r.ok) {
+      location.href = '/dashboard/?welcome=1';
+      return;
+    }
+    resetTurnstile();
+    showFieldErrors(form, r.data.fields);
+    errBox.textContent = r.data.error || 'Something went wrong. Please try again.';
+    errBox.hidden = false;
+  });
+</script>

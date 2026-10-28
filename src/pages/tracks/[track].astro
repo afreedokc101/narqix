@@ -1,0 +1,90 @@
+---
+import Base from '../../layouts/Base.astro';
+import { tracks, lessonById, exams, TRACK_BLURBS } from '../../lib/data';
+
+export function getStaticPaths() {
+  return Object.keys(tracks).map((track) => ({ params: { track } }));
+}
+const t = tracks[Astro.params.track!];
+const trackExam = exams.find((e) => e.track === t.key)!;
+const foundation = exams.find((e) => e.id === 'foundation')!;
+---
+<Base title={`${t.title} learning path`} description={TRACK_BLURBS[t.key]}>
+  <div class="wrap-narrow py-10" data-track={t.key}>
+    <p class="eyebrow">Learning path</p>
+    <h1 class="mt-2 text-3xl sm:text-4xl">{t.title}</h1>
+    <p class="mt-3 text-muted">{t.summary || TRACK_BLURBS[t.key]}</p>
+
+    <div class="card p-4 mt-6" data-progress hidden>
+      <div class="flex justify-between text-sm"><span>Your progress</span><span class="text-muted" data-count></span></div>
+      <div class="bar mt-2"><span style="width:0%"></span></div>
+    </div>
+    <p class="mt-6 text-sm text-muted" data-anon>
+      <a href="/signup/" class="underline">Sign up</a> to track which pages you have read.
+    </p>
+
+    <ol class="mt-8 grid gap-8">
+      {t.steps.map((s, i) => (
+        <li>
+          <h2 class="text-xl flex items-center gap-3">
+            <span class="grid place-items-center h-8 w-8 rounded-full border border-accent text-accent text-sm font-display shrink-0">{i + 1}</span>
+            {s.title}
+            <span class="text-sm text-muted font-sans font-normal" data-step-count={s.key}>{s.lessonIds.length} pages</span>
+          </h2>
+          <details class="toggle mt-3" open={i === 0}>
+            <summary>Show pages</summary>
+            <ul class="grid gap-1 pb-3">
+              {s.lessonIds.map((id) => {
+                const l = lessonById.get(id)!;
+                return (
+                  <li>
+                    <a href={l.url} data-lid={id} class="flex gap-2 items-start py-1.5 no-underline text-ink hover:text-accent">
+                      <span class="mark mt-1 h-4 w-4 rounded-full border border-line shrink-0" aria-hidden="true"></span>
+                      <span>{l.title}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        </li>
+      ))}
+      <li>
+        <h2 class="text-xl flex items-center gap-3">
+          <span class="grid place-items-center h-8 w-8 rounded-full border border-accent text-accent text-sm font-display shrink-0">{t.steps.length + 1}</span>
+          Exams
+        </h2>
+        <div class="mt-3 grid gap-3">
+          {[foundation, trackExam].map((e) => (
+            <a href={`/exams/#${e.id}`} class="card p-4 block no-underline text-ink hover:border-accent">
+              <span class="font-display font-bold">{e.title}</span>
+              <span class="block text-sm text-muted mt-1">{e.total} questions · {e.timeLimitMinutes} minutes · pass {e.passMark} ({e.passPercent}%) with all {e.gateCount} 🔒 gate questions correct</span>
+              {e.partRules.map((r) => <span class="block text-sm text-muted">{r.label}.</span>)}
+            </a>
+          ))}
+        </div>
+      </li>
+    </ol>
+  </div>
+</Base>
+<style>
+  a[data-lid].is-read .mark { background: var(--color-success); border-color: var(--color-success); }
+</style>
+<script>
+  import { api, loggedIn } from '../../scripts/client';
+  (async () => {
+    if (!loggedIn()) return;
+    const r = await api('/api/progress');
+    if (!r.ok) return;
+    document.querySelector('[data-anon]')?.remove();
+    const read = new Set<string>(r.data.read);
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('a[data-lid]')];
+    let done = 0;
+    for (const a of links) if (read.has(a.dataset.lid!)) { a.classList.add('is-read'); done++; }
+    const box = document.querySelector('[data-progress]') as HTMLElement;
+    box.hidden = false;
+    const pct = links.length ? Math.round((done / links.length) * 100) : 0;
+    box.querySelector('[data-count]')!.textContent = `${done}/${links.length} pages · ${pct}%`;
+    (box.querySelector('.bar > span') as HTMLElement).style.width = pct + '%';
+  })();
+</script>

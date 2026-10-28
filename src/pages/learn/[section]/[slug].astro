@@ -1,0 +1,11 @@
+---
+import { getCollection } from 'astro:content';
+import LessonPage from '../../../components/LessonPage.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('lessons');
+  return entries.filter((e) => e.data.page !== 'overview').map((entry) => ({ params: { section: entry.data.section, slug: entry.data.page }, props: { entry } }));
+}
+const { entry } = Astro.props;
+---
+<LessonPage entry={entry} />

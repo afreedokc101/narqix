@@ -1,0 +1,38 @@
+---
+import Base from '../../layouts/Base.astro';
+import { sections, sectionLessons, TRACK_BLURBS } from '../../lib/data';
+
+const groups = [
+  { key: 'foundation', title: 'Foundation (everyone)', note: 'Start here. The Foundation Exam covers these three sections.' },
+  { key: 'track', title: 'Industry tracks', note: 'Study the track you want to be hired for. Each has its own Track Exam.' },
+  { key: 'scripts', title: 'Script Library', note: 'Every script, sorted by track. Your track page lists the ones you need.' },
+  { key: 'specialist', title: 'Specialists', note: 'Standards for designers, developers, marketers and other specialists.' },
+  { key: 'resources', title: 'Templates & Tools', note: 'Worksheets, report formats and checklists used on the job.' },
+];
+---
+<Base title="Learn" description="All Narqix Academy lessons: Start Here, Narqix Standards, Core Skills, the eight industry tracks, the Script Library and Specialist Standards.">
+  <div class="wrap py-10">
+    <h1 class="text-3xl sm:text-4xl">Learn</h1>
+    <p class="mt-3 text-muted max-w-2xl">Follow the learning path: Start Here, Narqix Standards, Core Skills, then your track and its scripts. Then take your exams.</p>
+    {groups.map((g) => (
+      <section class="mt-10" aria-label={g.title}>
+        <h2 class="text-xl">{g.title}</h2>
+        <p class="text-sm text-muted mt-1">{g.note}</p>
+        <ul class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {sections.filter((s) => s.group === g.key).map((s) => {
+            const list = sectionLessons(s.key);
+            return (
+              <li>
+                <a href={`/learn/${s.key}/`} class="card p-4 h-full block no-underline text-ink hover:border-accent transition-colors">
+                  <span class="font-display font-bold">{s.title}</span>
+                  <span class="block text-sm text-muted mt-1">{TRACK_BLURBS[s.key] ?? `${list.length} pages`}</span>
+                  {TRACK_BLURBS[s.key] && <span class="block text-xs text-faint mt-2">{list.length} pages</span>}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ))}
+  </div>
+</Base>

@@ -1,0 +1,44 @@
+---
+// Template for /verify/<id>. functions/verify/[id].ts fills it in with HTMLRewriter.
+import Base from '../layouts/Base.astro';
+---
+<Base title="Certificate" noindex>
+  <div class="wrap-narrow py-10">
+    <div data-cert="missing">
+      <h1 class="text-3xl">Certificate not found</h1>
+      <p class="mt-3 text-muted">No Narqix Academy certificate has the ID <strong class="text-ink" data-f="query"></strong>. Check the ID and <a href="/verify/">try again</a>.</p>
+    </div>
+    <div data-cert="found" hidden>
+      <p class="eyebrow">Certificate verification</p>
+      <div class="card mt-4 p-6 sm:p-8" style="background: linear-gradient(135deg, rgb(139 140 255 / .12), transparent 55%), var(--color-surface);">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <span class="text-sm text-muted">Status</span>
+          <span class="badge" data-f="status"></span>
+        </div>
+        <h1 class="mt-5 text-3xl sm:text-4xl" data-f="name"></h1>
+        <p class="mt-2 text-lg text-accent font-display font-bold" data-f="title"></p>
+        <dl class="mt-6 grid grid-cols-2 gap-4 text-sm">
+          <div><dt class="text-muted">Track</dt><dd data-f="track"></dd></div>
+          <div><dt class="text-muted">Issued</dt><dd data-f="date"></dd></div>
+          <div><dt class="text-muted">Foundation Exam</dt><dd data-f="foundation"></dd></div>
+          <div><dt class="text-muted">Track Exam</dt><dd data-f="trackScore"></dd></div>
+          <div class="col-span-2"><dt class="text-muted">Certificate ID</dt><dd class="font-mono" data-f="id"></dd></div>
+        </dl>
+        <p class="mt-6 text-xs text-faint">Pre-certification covers the written Foundation and Track exams. Role-play and live certification are completed after hiring.</p>
+      </div>
+      <p class="mt-6"><button class="btn btn-ghost" data-pdf>Download PDF</button></p>
+    </div>
+  </div>
+  <script type="application/json" id="cert-data">null</script>
+</Base>
+<script>
+  const data = JSON.parse(document.getElementById('cert-data')?.textContent || 'null');
+  const btn = document.querySelector('[data-pdf]') as HTMLButtonElement | null;
+  btn?.addEventListener('click', async () => {
+    if (!data) return;
+    btn.disabled = true;
+    const { downloadCertificate } = await import('../scripts/certificate-pdf');
+    await downloadCertificate(data);
+    btn.disabled = false;
+  });
+</script>
