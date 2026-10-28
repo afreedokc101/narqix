@@ -5,13 +5,12 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "narqix-academy"
-# Replace with the id printed by `npx wrangler d1 create narqix-academy` (see README).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "12183e93-1c9b-4df9-b347-71dc23297432"
 migrations_dir = "migrations"
 
 [vars]
 # Public Turnstile site key. Secret key is set with `wrangler pages secret put TURNSTILE_SECRET_KEY`.
-TURNSTILE_SITE_KEY = ""
+TURNSTILE_SITE_KEY = "0x4AAAAAAFqAaxFLEXGMq5SU"
 # Cloudflare Access (Zero Trust) settings for /admin. See README "Admin dashboard".
 ACCESS_TEAM_DOMAIN = ""
 ACCESS_AUD = ""
