@@ -1,0 +1,104 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Welcome" noindex>
+  <div class="wrap-narrow py-12 max-w-xl">
+    <p class="text-muted" data-loading>Loading…</p>
+    <div data-content hidden>
+      <p class="eyebrow">Your account is ready</p>
+      <h1 class="mt-2 text-3xl sm:text-4xl" data-title>Welcome to Narqix Academy</h1>
+
+      <div data-state="pending_nda" hidden>
+        <p class="mt-4 text-lg text-muted">You're one step away from your training. Upload the NDA you signed after applying, and our hiring team will review it, usually within 1 to 2 working days.</p>
+        <p class="mt-3 text-muted">We'll email you the moment your Academy access opens.</p>
+      </div>
+
+      <div data-state="nda_submitted" hidden>
+        <div class="notice notice-ok mt-6"><strong>Your NDA is with our hiring team.</strong> <span data-uploaded></span></div>
+        <p class="mt-4 text-muted">Reviews usually take 1 to 2 working days. We'll email you as soon as your Academy access is approved, so there's nothing else you need to do for now.</p>
+        <p class="mt-3 text-sm text-muted">Uploaded the wrong file? You can replace it below while it's waiting for review.</p>
+      </div>
+
+      <div data-state="rejected" hidden>
+        <div class="notice notice-error mt-6" role="alert"><strong>We couldn't approve your NDA.</strong> <span data-note></span></div>
+        <p class="mt-4 text-muted">Please upload a corrected copy. We'll review it again and email you the result.</p>
+      </div>
+
+      <form class="card p-5 mt-8 grid gap-4" data-form novalidate>
+        <div class="field">
+          <label for="file" data-file-label>Your signed NDA</label>
+          <input class="input" id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" required />
+          <span class="hint">PDF, JPG or PNG, up to 10 MB. A clear photo of every signed page works too.</span>
+        </div>
+        <div class="notice notice-error" data-error hidden role="alert"></div>
+        <button class="btn btn-primary" type="submit" data-submit>Upload signed NDA</button>
+      </form>
+
+      <p class="mt-8 text-sm text-muted">Can't find the NDA? It's in the email we sent after you applied. Questions: <a href="mailto:hiring@narqix.com">hiring@narqix.com</a></p>
+      <p class="mt-2"><button class="btn btn-ghost btn-sm" data-logout>Log out</button></p>
+    </div>
+  </div>
+</Base>
+<script>
+  import { api, fmtDate } from '../scripts/client';
+  const $ = (s: string) => document.querySelector(s) as HTMLElement;
+  const form = $('[data-form]') as HTMLFormElement;
+  const err = $('[data-error]');
+  const submit = $('[data-submit]') as HTMLButtonElement;
+
+  function show(status: string, data: any) {
+    for (const el of document.querySelectorAll<HTMLElement>('[data-state]')) el.hidden = el.dataset.state !== status;
+    const first = String(data.candidate.fullName).split(/\s+/)[0];
+    $('[data-title]').textContent = status === 'pending_nda' ? `Welcome to Narqix Academy, ${first}` : `Thanks, ${first}`;
+    const nda = data.access.nda;
+    $('[data-uploaded]').textContent = nda ? `We received ${nda.filename} on ${fmtDate(nda.uploadedAt, true)}.` : '';
+    $('[data-note]').textContent = data.access.note ? `Reason: ${data.access.note}` : '';
+    $('[data-file-label]').textContent = status === 'nda_submitted' ? 'Replace your NDA' : 'Your signed NDA';
+    submit.textContent = status === 'nda_submitted' ? 'Upload replacement' : 'Upload signed NDA';
+  }
+
+  async function load() {
+    const r = await api('/api/me');
+    if (r.status === 401) return void (location.href = '/login/?next=/welcome/');
+    if (!r.ok) return void ($('[data-loading]').textContent = 'Could not load your account. Refresh to try again.');
+    if (r.data.access.status === 'approved') return void (location.href = '/dashboard/');
+    $('[data-loading]').hidden = true;
+    $('[data-content]').hidden = false;
+    show(r.data.access.status, r.data);
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.hidden = true;
+    const file = (form.elements.namedItem('file') as HTMLInputElement).files?.[0];
+    if (!file) return void ((err.textContent = 'Choose your signed NDA file first.'), (err.hidden = false));
+    if (file.size > 10 * 1024 * 1024) return void ((err.textContent = 'That file is larger than 10 MB. Upload a smaller PDF or photo.'), (err.hidden = false));
+    submit.disabled = true;
+    const label = submit.textContent;
+    submit.textContent = 'Uploading…';
+    const body = new FormData();
+    body.append('file', file);
+    let res: Response | null = null;
+    try {
+      res = await fetch('/api/nda', { method: 'POST', body, credentials: 'same-origin' });
+    } catch {}
+    submit.disabled = false;
+    submit.textContent = label;
+    if (!res || !res.ok) {
+      const data = res ? await res.json().catch(() => ({})) : {};
+      err.textContent = (data as any).error || 'Upload failed. Check your connection and try again.';
+      err.hidden = false;
+      return;
+    }
+    form.reset();
+    await load();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  $('[data-logout]').addEventListener('click', async () => {
+    await api('/api/auth/logout', {});
+    location.href = '/';
+  });
+
+  load();
+</script>

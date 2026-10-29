@@ -98,6 +98,16 @@ const r = await page.evaluate(async (id) => {
   return res.status;
 }, id);
 if (r !== 201) throw new Error('signup failed ' + r + ' (sign-up is rate limited to 10 per hour per IP; restart wrangler with a fresh .wrangler/state)');
+// Upload an NDA and approve it as the local dev admin, so the candidate can open the exams.
+const approved = await page.evaluate(async () => {
+  const body = new FormData();
+  body.append('file', new Blob(['%PDF-1.4\n%%EOF\n'], { type: 'application/pdf' }), 'nda.pdf');
+  await fetch('/api/nda', { method: 'POST', body });
+  const me = await (await fetch('/api/me')).json();
+  const res = await fetch(`/api/admin/candidates/${me.candidate.id}/access`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ decision: 'approve' }) });
+  return res.status;
+});
+if (approved !== 200) throw new Error('NDA approval failed ' + approved + ' (needs DEV_ADMIN_EMAIL in .dev.vars)');
 for (const exam of exams) {
   bodies = [];
   await page.goto(`${BASE}/exams/take/?exam=${exam.id}`);

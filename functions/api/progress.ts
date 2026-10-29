@@ -2,6 +2,7 @@ import type { Ctx } from '../_lib/env';
 import { error, json, readJson, sameOrigin, str } from '../_lib/http';
 import { currentCandidate } from '../_lib/auth';
 import { trackLessonIds, trackTitle } from '../_lib/exams';
+import { needsApproval } from '../_lib/nda';
 import lessonsData from '../../src/data/lessons.json';
 
 const LESSON_IDS = new Set((lessonsData as { lessons: { id: string }[] }).lessons.map((l) => l.id));
@@ -9,6 +10,8 @@ const LESSON_IDS = new Set((lessonsData as { lessons: { id: string }[] }).lesson
 export const onRequestGet = async ({ request, env }: Ctx) => {
   const me = await currentCandidate(env, request);
   if (!me) return error(401, 'Not logged in');
+  const blocked = needsApproval(me);
+  if (blocked) return blocked;
   const rows = await env.DB.prepare('SELECT lesson_id FROM lesson_progress WHERE candidate_id = ?').bind(me.id).all<{ lesson_id: string }>();
   const read = rows.results.map((r) => r.lesson_id);
   const set = new Set(read);
@@ -21,6 +24,8 @@ export const onRequestPost = async ({ request, env }: Ctx) => {
   if (!sameOrigin(request)) return error(403, 'Bad origin');
   const me = await currentCandidate(env, request);
   if (!me) return error(401, 'Not logged in');
+  const blocked = needsApproval(me);
+  if (blocked) return blocked;
   const b = await readJson(request);
   const lessonId = str(b.lessonId, 64);
   if (!LESSON_IDS.has(lessonId)) return error(400, 'Unknown lesson');

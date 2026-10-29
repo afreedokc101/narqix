@@ -2,11 +2,14 @@ import type { Env } from './env';
 import { currentCandidate, type Candidate } from './auth';
 import { error } from './http';
 import { expireIfNeeded, type AttemptRow } from './exams';
+import { needsApproval } from './nda';
 
 /** Load an attempt owned by the logged-in candidate, closing it first if its time is up. */
 export async function loadOwnAttempt(env: Env, request: Request, id: string): Promise<{ me: Candidate; attempt: AttemptRow } | Response> {
   const me = await currentCandidate(env, request);
   if (!me) return error(401, 'Not logged in');
+  const blocked = needsApproval(me);
+  if (blocked) return blocked;
   const row = await env.DB.prepare('SELECT * FROM exam_attempts WHERE id = ? AND candidate_id = ?').bind(id, me.id).first<AttemptRow>();
   if (!row) return error(404, 'Attempt not found');
   return { me, attempt: await expireIfNeeded(env, row) };

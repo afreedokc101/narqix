@@ -13,6 +13,8 @@ export interface Candidate {
   cv_url: string | null;
   email_verified: number;
   hiring_status: string;
+  access_status: 'pending_nda' | 'nda_submitted' | 'approved' | 'rejected';
+  access_note: string | null;
   created_at: number;
 }
 

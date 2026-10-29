@@ -1,12 +1,15 @@
 import type { Ctx } from '../../../_lib/env';
 import { error, json, readJson, sameOrigin, str } from '../../../_lib/http';
 import { currentCandidate } from '../../../_lib/auth';
+import { needsApproval } from '../../../_lib/nda';
 import { attemptsFor, eligibility, expireIfNeeded, getExam, newLayout } from '../../../_lib/exams';
 
 export const onRequestPost = async ({ request, env, params }: Ctx<'examId'>) => {
   if (!sameOrigin(request)) return error(403, 'Bad origin');
   const me = await currentCandidate(env, request);
   if (!me) return error(401, 'Log in to take an exam.');
+  const blocked = needsApproval(me);
+  if (blocked) return blocked;
   const exam = getExam(String(params.examId));
   if (!exam) return error(404, 'Unknown exam');
   const b = await readJson(request);

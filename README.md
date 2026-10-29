@@ -295,15 +295,29 @@ npm run deploy
 
 Remove someone the same way, from both places.
 
+## NDA gate
+
+New candidates can't open any lessons, tracks, exams or their dashboard until the hiring team approves their signed NDA:
+
+1. **Apply:** the candidate applies through the Google Form, and `scripts/google-form-nda-email.gs` emails them the NDA. Setup steps are in `FINISH-SETUP.md`.
+2. **Sign up:** after creating an account, the candidate lands on `/welcome/` and uploads the signed NDA (PDF, JPG or PNG, up to 10 MB). The file is stored in D1, in `nda_files` and `nda_chunks`.
+3. **Review:** the hiring team sees **NDA to review** in `/admin/`, opens the file, and clicks **Approve** or **Reject**. A rejection needs a reason, which the candidate sees and receives by email. An approval can be revoked later.
+4. **Access:** an approved candidate gets an email, and lessons and exams open.
+
+Access states are `pending_nda`, `nda_submitted`, `approved` and `rejected`, kept in `candidates.access_status`. Every change is logged in `status_history` as `access:<state>`. The pages are locked by `functions/_middleware.ts`, and the candidate APIs check the same rule themselves.
+
+Emails go out through Resend once `RESEND_API_KEY` and `EMAIL_FROM` are set (README step 8). "New NDA to review" alerts go to `ADMIN_EMAILS`, or to `NDA_NOTIFY_EMAILS` if that's set in `wrangler.toml`.
+
 ## Hiring team dashboard
 
 `/admin/` shows every candidate with these columns:
 - name, phone, email, district and CV link;
 - track and progress % through their track's learning path;
 - every exam attempt with its score;
-- certificate status.
+- certificate status;
+- NDA status, with **View NDA**, **Approve** and **Reject** (see "NDA gate").
 
-Filter by track, certificate status or hiring status, and search by name, phone, email or district. Sort with **Pre-Certified first**, newest or most progress. **Export CSV** downloads the filtered list. The **New / Contacted / Interview / Hired** buttons record the hiring status, and each change is logged with the admin's email in `status_history`.
+Filter by Academy access, track, certificate status or hiring status, and search by name, phone, email or district. Sort with **Pre-Certified first**, newest or most progress. **Export CSV** downloads the filtered list. The **New / Contacted / Interview / Hired** buttons record the hiring status, and each change is logged with the admin's email in `status_history`.
 
 To revoke a certificate (it then shows "Revoked" on its verify page):
 

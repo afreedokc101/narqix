@@ -1,11 +1,19 @@
 import type { Ctx } from '../_lib/env';
 import { error, json } from '../_lib/http';
 import { currentCandidate } from '../_lib/auth';
+import { latestNda } from '../_lib/nda';
 import { allExams, attemptsFor, eligibility, expireIfNeeded, trackLessonIds, trackTitle } from '../_lib/exams';
 
 export const onRequestGet = async ({ request, env }: Ctx) => {
   const me = await currentCandidate(env, request);
   if (!me) return error(401, 'Not logged in');
+  const candidate = { id: me.id, fullName: me.full_name, phone: me.phone, email: me.email, district: me.district, track: me.track, trackTitle: trackTitle(me.track), cvUrl: me.cv_url };
+  const access = { status: me.access_status, note: me.access_note };
+  // Until the NDA is approved, the candidate only gets what the welcome page needs.
+  if (me.access_status !== 'approved') {
+    const nda = await latestNda(env, me.id);
+    return json({ candidate, access: { ...access, nda: nda && { filename: nda.filename, uploadedAt: nda.uploaded_at } } });
+  }
   const read = (await env.DB.prepare('SELECT lesson_id FROM lesson_progress WHERE candidate_id = ?').bind(me.id).all<{ lesson_id: string }>()).results.map((r) => r.lesson_id);
   const readSet = new Set(read);
   let attempts = await attemptsFor(env, me.id);
@@ -25,7 +33,8 @@ export const onRequestGet = async ({ request, env }: Ctx) => {
   ).results.map((c: any) => ({ ...c, trackTitle: trackTitle(c.track) }));
   const ids = trackLessonIds(me.track);
   return json({
-    candidate: { id: me.id, fullName: me.full_name, phone: me.phone, email: me.email, district: me.district, track: me.track, trackTitle: trackTitle(me.track), cvUrl: me.cv_url },
+    candidate,
+    access,
     progress: { read, trackRead: ids.filter((id) => readSet.has(id)).length, trackTotal: ids.length },
     exams,
     certificates,

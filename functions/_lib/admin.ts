@@ -1,5 +1,6 @@
 import type { Env } from './env';
 import { allExams, eligibility, trackLessonIds, trackTitle, type AttemptRow } from './exams';
+import { ACCESS_LABELS, type AccessStatus } from './nda';
 
 export const HIRING_STATUSES = ['new', 'contacted', 'interview', 'hired'] as const;
 
@@ -14,6 +15,12 @@ export interface CandidateRow {
   cvUrl: string | null;
   createdAt: number;
   hiringStatus: string;
+  accessStatus: AccessStatus;
+  accessLabel: string;
+  accessNote: string | null;
+  accessReviewedBy: string | null;
+  accessReviewedAt: number | null;
+  nda: { filename: string; size: number; uploadedAt: number } | null;
   progressPct: number;
   lessonsRead: number;
   lessonsTotal: number;
@@ -24,12 +31,14 @@ export interface CandidateRow {
 }
 
 export async function loadCandidates(env: Env): Promise<CandidateRow[]> {
-  const [cands, progress, attempts, certs] = await Promise.all([
+  const [cands, progress, attempts, certs, ndas] = await Promise.all([
     env.DB.prepare('SELECT * FROM candidates ORDER BY created_at DESC').all<any>(),
     env.DB.prepare('SELECT candidate_id, lesson_id FROM lesson_progress').all<{ candidate_id: string; lesson_id: string }>(),
     env.DB.prepare('SELECT id, candidate_id, exam_id, status, score, total, started_at, deadline_at, submitted_at FROM exam_attempts ORDER BY started_at').all<AttemptRow>(),
     env.DB.prepare('SELECT id, candidate_id, track, issued_at, status FROM certificates ORDER BY issued_at').all<any>(),
+    env.DB.prepare('SELECT candidate_id, filename, size, uploaded_at FROM nda_files ORDER BY uploaded_at').all<{ candidate_id: string; filename: string; size: number; uploaded_at: number }>(),
   ]);
+  const latestNda = new Map(ndas.results.map((n) => [n.candidate_id, { filename: n.filename, size: n.size, uploadedAt: n.uploaded_at }]));
   const readBy = new Map<string, Set<string>>();
   for (const r of progress.results) {
     if (!readBy.has(r.candidate_id)) readBy.set(r.candidate_id, new Set());
@@ -70,6 +79,12 @@ export async function loadCandidates(env: Env): Promise<CandidateRow[]> {
       cvUrl: c.cv_url,
       createdAt: c.created_at,
       hiringStatus: c.hiring_status,
+      accessStatus: c.access_status,
+      accessLabel: ACCESS_LABELS[c.access_status as AccessStatus] || c.access_status,
+      accessNote: c.access_note,
+      accessReviewedBy: c.access_reviewed_by,
+      accessReviewedAt: c.access_reviewed_at,
+      nda: latestNda.get(c.id) || null,
       progressPct: ids.length ? Math.round((lessonsRead / ids.length) * 100) : 0,
       lessonsRead,
       lessonsTotal: ids.length,
@@ -89,11 +104,11 @@ function csvCell(v: unknown): string {
 
 export function toCsv(rows: CandidateRow[]): string {
   const examIds = allExams().map((e) => e.id);
-  const header = ['Name', 'Phone', 'Email', 'District', 'Track', 'CV', 'Signed up', 'Hiring status', 'Progress %', 'Certificate status', 'Certificate IDs',
+  const header = ['Name', 'Phone', 'Email', 'District', 'Track', 'CV', 'Signed up', 'Academy access', 'Hiring status', 'Progress %', 'Certificate status', 'Certificate IDs',
     ...examIds.flatMap((id) => [`${id} attempts`, `${id} best score`, `${id} result`])];
   const lines = [header.map(csvCell).join(',')];
   for (const r of rows) {
-    const cells: unknown[] = [r.fullName, r.phone, r.email, r.district, r.trackTitle, r.cvUrl, new Date(r.createdAt).toISOString().slice(0, 10), r.hiringStatus, r.progressPct, r.certificateStatus,
+    const cells: unknown[] = [r.fullName, r.phone, r.email, r.district, r.trackTitle, r.cvUrl, new Date(r.createdAt).toISOString().slice(0, 10), r.accessLabel, r.hiringStatus, r.progressPct, r.certificateStatus,
       r.certificates.map((c) => c.id).join(' ')];
     for (const id of examIds) {
       const e = r.exams.find((x) => x.id === id);

@@ -8,6 +8,8 @@ export interface Env {
   ADMIN_EMAILS?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  /** Comma-separated addresses alerted when a candidate uploads an NDA. Defaults to ADMIN_EMAILS. */
+  NDA_NOTIFY_EMAILS?: string;
   SITE_URL?: string;
   /** Local development only (.dev.vars): treat requests from localhost as this admin. */
   DEV_ADMIN_EMAIL?: string;

@@ -44,17 +44,35 @@ class Client {
     try { data = JSON.parse(text); } catch { data = text; }
     return { status: res.status, data, text, headers: res.headers };
   }
+  async upload(path, bytes, filename, type) {
+    const body = new FormData();
+    body.append('file', new Blob([bytes], { type }), filename);
+    const res = await fetch(BASE + path, { method: 'POST', body, headers: { origin: BASE, cookie: Object.entries(this.cookies).map(([k, v]) => `${k}=${v}`).join('; ') } });
+    let data;
+    try { data = await res.json(); } catch { data = null; }
+    return { status: res.status, data };
+  }
+}
+
+const PDF = new TextEncoder().encode('%PDF-1.4\n% signed NDA test file\n%%EOF\n');
+
+/** Upload a signed NDA and approve it as the hiring team, so the candidate can use the Academy. */
+async function approve(c) {
+  await c.upload('/api/nda', PDF, 'nda.pdf', 'application/pdf');
+  const me = await c.req('/api/me');
+  await new Client().req(`/api/admin/candidates/${me.data.candidate.id}/access`, { decision: 'approve' });
 }
 
 const uniq = Date.now().toString().slice(-7);
 let phoneSeq = 0;
 const phone = () => `017${uniq}${String(phoneSeq++).padStart(1, '0')}`.slice(0, 11);
 
-async function signup(name, track) {
+async function signup(name, track, { approved = true } = {}) {
   const c = new Client();
   const p = `01${String(3 + (phoneSeq % 7))}${uniq}${phoneSeq++}`.slice(0, 11);
   const r = await c.req('/api/signup', { fullName: name, phone: p, email: `${name.toLowerCase().replace(/\W/g, '')}.${uniq}@example.com`, district: 'Dhaka', track, password: 'correct horse 1' });
   c.phone = p;
+  if (approved && r.status === 201) await approve(c);
   return { c, r };
 }
 
@@ -104,6 +122,45 @@ async function main() {
   check('phone + password login works (880 prefix)', lr.status === 200 && login.cookies.nq_session);
   const xsite = await alice.req('/api/progress', { lessonId: 'x' });
   check('unknown lesson id rejected', xsite.status === 400);
+
+  console.log('\nNDA gate');
+  const { c: nina } = await signup('Nina Gate', 'solar', { approved: false });
+  const m0 = await nina.req('/api/me');
+  check('new account starts as pending_nda, with no exams or progress', m0.data.access?.status === 'pending_nda' && !m0.data.exams, m0.data);
+  check('progress is blocked before approval', (await nina.req('/api/progress')).status === 403);
+  check('exam start is blocked before approval', (await nina.req('/api/exams/foundation/start', {})).status === 403);
+  const gatedPage = await nina.req('/learn/');
+  check('lesson pages redirect to /welcome/ before approval', gatedPage.status === 302 && gatedPage.headers.get('location') === '/welcome/', gatedPage.status);
+  const anonPage = await new Client().req('/dashboard/');
+  check('logged-out visitors are sent to log in', anonPage.status === 302 && anonPage.headers.get('location').startsWith('/login/?next='), anonPage.headers.get('location'));
+  check('home page stays public', (await new Client().req('/')).status === 200);
+  check('welcome page loads', (await nina.req('/welcome/')).status === 200);
+  check('non-PDF/image upload is rejected', (await nina.upload('/api/nda', new TextEncoder().encode('<script>alert(1)</script>'), 'nda.pdf', 'application/pdf')).status === 415);
+  check('upload over 10 MB is rejected', (await nina.upload('/api/nda', new Uint8Array(10 * 1024 * 1024 + 1).fill(0x25), 'big.pdf', 'application/pdf')).status === 413);
+  const big = new Uint8Array(3_200_000);
+  big.set([0xff, 0xd8, 0xff]);
+  for (let i = 3; i < big.length; i++) big[i] = i % 251;
+  const up = await nina.upload('/api/nda', big, 'my nda scan.jpeg', 'image/jpeg');
+  check('signed NDA upload (3.2 MB photo, stored in chunks) => nda_submitted', up.status === 201 && (await nina.req('/api/me')).data.access.status === 'nda_submitted', up.data);
+  const list0 = await new Client().req('/api/admin/candidates');
+  const ninaRow = list0.data.candidates.find((r) => r.fullName === 'Nina Gate');
+  check('admin sees NDA to review with the file', ninaRow?.accessStatus === 'nda_submitted' && ninaRow.nda?.filename === 'my nda scan.jpg' && ninaRow.nda.size === big.length, ninaRow);
+  const file = await fetch(`${BASE}/api/admin/candidates/${ninaRow.id}/nda`);
+  const got = new Uint8Array(await file.arrayBuffer());
+  check('admin can open the NDA, byte for byte', file.headers.get('content-type') === 'image/jpeg' && got.length === big.length && got.every((v, i) => v === big[i]));
+  check('rejecting without a reason is refused', (await new Client().req(`/api/admin/candidates/${ninaRow.id}/access`, { decision: 'reject' })).status === 400);
+  await new Client().req(`/api/admin/candidates/${ninaRow.id}/access`, { decision: 'reject', note: 'Page 2 is not signed.' });
+  const m1 = await nina.req('/api/me');
+  check('rejected candidate sees the reason', m1.data.access.status === 'rejected' && m1.data.access.note === 'Page 2 is not signed.', m1.data.access);
+  check('rejected candidate is still blocked', (await nina.req('/api/progress')).status === 403);
+  await nina.upload('/api/nda', PDF, 'nda-fixed.pdf', 'application/pdf');
+  check('re-upload goes back to review', (await nina.req('/api/me')).data.access.status === 'nda_submitted');
+  const ok = await new Client().req(`/api/admin/candidates/${ninaRow.id}/access`, { decision: 'approve' });
+  check('hiring team approves', ok.status === 200 && ok.data.accessStatus === 'approved', ok.data);
+  check('approved candidate can use progress and lessons', (await nina.req('/api/progress')).status === 200 && (await nina.req('/learn/')).status === 200);
+  check('approved candidate cannot upload again', (await nina.upload('/api/nda', PDF, 'x.pdf', 'application/pdf')).status === 409);
+  const hist = sql(`SELECT status FROM status_history WHERE candidate_id='${ninaRow.id}' ORDER BY id`);
+  check('every access change is logged', ['access:nda_submitted', 'access:rejected', 'access:approved'].every((s) => hist.includes(s)));
 
   console.log('\nProgress');
   const lessons = JSON.parse(fs.readFileSync(ROOT + 'src/data/lessons.json', 'utf8'));

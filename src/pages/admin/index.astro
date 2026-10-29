@@ -20,7 +20,11 @@ const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
       <a class="btn btn-ghost btn-sm" data-csv href="/api/admin/export">Export CSV</a>
     </div>
 
-    <div class="mt-6 grid gap-3 sm:grid-cols-5 items-end">
+    <div class="notice mt-6" data-review hidden></div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-6 items-end">
+      <div class="field"><label for="f-access">Academy access</label>
+        <select id="f-access" class="input"><option value="">Any</option><option value="nda_submitted">NDA to review</option><option value="pending_nda">Waiting for NDA</option><option value="approved">Approved</option><option value="rejected">NDA rejected</option></select></div>
       <div class="field"><label for="f-track">Track</label>
         <select id="f-track" class="input"><option value="">All tracks</option>{trackList.map((t) => <option value={t.key}>{t.title}</option>)}</select></div>
       <div class="field"><label for="f-cert">Certificate</label>
@@ -40,6 +44,7 @@ const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
           <tr>
             <th class="p-3 font-semibold">Candidate</th>
             <th class="p-3 font-semibold">Contact</th>
+            <th class="p-3 font-semibold">NDA</th>
             <th class="p-3 font-semibold">Track</th>
             <th class="p-3 font-semibold">Progress</th>
             <th class="p-3 font-semibold">Exams</th>
@@ -58,9 +63,26 @@ const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
   let rows: any[] = [];
   const $ = (s: string) => document.querySelector(s) as HTMLInputElement;
 
+  const ACCESS_BADGE: Record<string, string> = { approved: 'badge-pass', rejected: 'badge-fail', nda_submitted: 'badge-accent' };
+  function ndaCell(r: any) {
+    const badge = `<span class="badge ${ACCESS_BADGE[r.accessStatus] || ''}">${esc(r.accessLabel)}</span>`;
+    const file = r.nda ? `<div class="text-xs mt-1"><a href="/api/admin/candidates/${esc(r.id)}/nda" target="_blank" rel="noopener">View NDA</a> · ${fmtDate(r.nda.uploadedAt)}</div>` : '';
+    const note = r.accessStatus === 'rejected' && r.accessNote ? `<div class="text-xs text-muted mt-1">${esc(r.accessNote)}</div>` : '';
+    const who = r.accessReviewedBy && r.accessStatus !== 'nda_submitted' ? `<div class="text-xs text-muted mt-1">by ${esc(r.accessReviewedBy)}</div>` : '';
+    const actions = r.nda
+      ? `<div class="flex flex-wrap gap-1 mt-2">${r.accessStatus !== 'approved' ? `<button class="btn btn-sm btn-primary" data-id="${esc(r.id)}" data-decision="approve">Approve</button>` : ''}${r.accessStatus !== 'rejected' ? `<button class="btn btn-sm btn-ghost" data-id="${esc(r.id)}" data-decision="reject">${r.accessStatus === 'approved' ? 'Revoke' : 'Reject'}</button>` : ''}</div>`
+      : '';
+    return badge + file + note + who + actions;
+  }
+
   function render() {
+    const waiting = rows.filter((r) => r.accessStatus === 'nda_submitted').length;
+    const review = document.querySelector('[data-review]') as HTMLElement;
+    review.hidden = !waiting;
+    review.innerHTML = `<strong>${waiting} NDA${waiting === 1 ? '' : 's'} waiting for review.</strong> <button class="btn btn-sm btn-ghost ml-2" data-show-review>Show them</button>`;
+    const access = $('#f-access').value;
     const track = $('#f-track').value, cert = $('#f-cert').value, status = $('#f-status').value, q = $('#f-q').value.toLowerCase().trim(), sort = $('#f-sort').value;
-    let list = rows.filter((r) => (!track || r.track === track) && (!cert || r.certificateStatus === cert) && (!status || r.hiringStatus === status) &&
+    let list = rows.filter((r) => (!access || r.accessStatus === access) && (!track || r.track === track) && (!cert || r.certificateStatus === cert) && (!status || r.hiringStatus === status) &&
       (!q || [r.fullName, r.phone, r.email, r.district].join(' ').toLowerCase().includes(q)));
     list = list.sort((a, b) =>
       sort === 'progress' ? b.progressPct - a.progressPct
@@ -76,6 +98,7 @@ const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
         <td class="p-3"><strong>${esc(r.fullName)}</strong><div class="text-xs text-muted">${esc(r.district)} · joined ${fmtDate(r.createdAt)}</div>
           ${r.cvUrl ? `<a class="text-xs" href="${esc(r.cvUrl)}" rel="noopener noreferrer" target="_blank">CV</a>` : ''}</td>
         <td class="p-3 whitespace-nowrap"><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><div class="text-xs"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></div></td>
+        <td class="p-3 min-w-44">${ndaCell(r)}</td>
         <td class="p-3">${esc(r.trackTitle)}</td>
         <td class="p-3 min-w-28"><span class="tabular-nums">${r.progressPct}%</span><div class="bar mt-1"><span style="width:${r.progressPct}%"></span></div><div class="text-xs text-muted">${r.lessonsRead}/${r.lessonsTotal}</div></td>
         <td class="p-3 min-w-48">${r.exams.length ? r.exams.map((e: any) => `<div class="text-xs"><span class="text-ink">${esc(e.title.replace(' Track Exam', '').replace(' Exam', ''))}</span>: ${e.attempts.map((x: any) => x.status === 'in_progress' ? '<span class="text-muted">in progress</span>' : `<span class="${x.status === 'passed' ? 'text-success' : 'text-alert'}">${x.score}/${x.total}</span>`).join(', ')}</div>`).join('') : '<span class="text-xs text-muted">None</span>'}</td>
@@ -85,7 +108,33 @@ const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
       </tr>`).join('');
   }
 
+  document.querySelector('[data-review]')!.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('[data-show-review]')) return;
+    $('#f-access').value = 'nda_submitted';
+    render();
+  });
+
   document.querySelector('[data-rows]')!.addEventListener('click', async (e) => {
+    const d = (e.target as HTMLElement).closest('[data-decision]') as HTMLButtonElement | null;
+    if (d) {
+      const row = rows.find((x) => x.id === d.dataset.id);
+      let note = '';
+      if (d.dataset.decision === 'reject') {
+        note = (prompt(`Why can't ${row?.fullName}'s NDA be approved? This reason is emailed to them.`, 'The NDA is not signed on every page.') || '').trim();
+        if (!note) return;
+      } else if (!confirm(`Approve ${row?.fullName}'s NDA and open their Academy access? They will get an email.`)) return;
+      d.disabled = true;
+      const r = await api(`/api/admin/candidates/${d.dataset.id}/access`, { decision: d.dataset.decision, note });
+      d.disabled = false;
+      if (!r.ok) return alert(r.data.error || 'Could not save the decision');
+      if (row) {
+        row.accessStatus = r.data.accessStatus;
+        row.accessLabel = { approved: 'Approved', rejected: 'NDA rejected' }[r.data.accessStatus as string] || row.accessLabel;
+        row.accessNote = d.dataset.decision === 'reject' ? note : null;
+        row.accessReviewedBy = (document.querySelector('[data-who]')!.textContent || '').replace('Signed in as ', '');
+      }
+      return render();
+    }
     const b = (e.target as HTMLElement).closest('[data-status]') as HTMLButtonElement | null;
     if (!b) return;
     b.disabled = true;
@@ -96,7 +145,9 @@ const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
     if (row) row.hiringStatus = b.dataset.status;
     render();
   });
-  for (const id of ['#f-track', '#f-cert', '#f-status', '#f-sort']) $(id).addEventListener('change', render);
+  const preset = new URLSearchParams(location.search).get('access');
+  if (preset) $('#f-access').value = preset;
+  for (const id of ['#f-access', '#f-track', '#f-cert', '#f-status', '#f-sort']) $(id).addEventListener('change', render);
   $('#f-q').addEventListener('input', render);
 
   (async () => {

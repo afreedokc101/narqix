@@ -79,7 +79,7 @@ import { DISTRICTS } from '../lib/districts';
     const r = await api('/api/signup', { ...data, turnstileToken });
     btn.disabled = false;
     if (r.ok) {
-      location.href = '/dashboard/?welcome=1';
+      location.href = '/welcome/';
       return;
     }
     resetTurnstile();
