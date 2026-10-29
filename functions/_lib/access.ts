@@ -6,13 +6,14 @@ import { fromB64url } from './crypto';
 import { getCookie } from './auth';
 
 const DEFAULT_ADMINS = 'afreed@narqix.com,ayman@narqix.com,sakib@narqix.com,hiring@narqix.com';
-let jwksCache: { at: number; keys: JsonWebKey[] } | null = null;
+const jwksCache = new Map<string, { at: number; keys: JsonWebKey[] }>();
 
 async function jwks(team: string): Promise<JsonWebKey[]> {
-  if (jwksCache && Date.now() - jwksCache.at < 3600_000) return jwksCache.keys;
+  const cached = jwksCache.get(team);
+  if (cached && Date.now() - cached.at < 3600_000) return cached.keys;
   const res = await fetch(`https://${team}/cdn-cgi/access/certs`);
   const data = (await res.json()) as { keys: JsonWebKey[] };
-  jwksCache = { at: Date.now(), keys: data.keys };
+  jwksCache.set(team, { at: Date.now(), keys: data.keys });
   return data.keys;
 }
 
@@ -24,8 +25,9 @@ export function adminEmails(env: Env): string[] {
 export async function adminEmail(env: Env, request: Request): Promise<string | null> {
   const url = new URL(request.url);
   if (env.DEV_ADMIN_EMAIL && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) return env.DEV_ADMIN_EMAIL;
-  const team = (env.ACCESS_TEAM_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-  if (!team || !env.ACCESS_AUD) return null;
+  // ACCESS_TEAM_DOMAIN may list several comma-separated domains (a renamed team keeps its old one).
+  const teams = (env.ACCESS_TEAM_DOMAIN || '').split(',').map((t) => t.trim().replace(/^https?:\/\//, '').replace(/\/$/, '')).filter(Boolean);
+  if (!teams.length || !env.ACCESS_AUD) return null;
   const token = request.headers.get('cf-access-jwt-assertion') || getCookie(request, 'CF_Authorization');
   if (!token) return null;
   const [h, p, s] = token.split('.');
@@ -33,6 +35,8 @@ export async function adminEmail(env: Env, request: Request): Promise<string | n
   try {
     const header = JSON.parse(new TextDecoder().decode(fromB64url(h)));
     const payload = JSON.parse(new TextDecoder().decode(fromB64url(p)));
+    const team = teams.find((t) => payload.iss === `https://${t}`);
+    if (!team) return null;
     const jwk = (await jwks(team)).find((k: any) => k.kid === header.kid);
     if (!jwk || header.alg !== 'RS256') return null;
     const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
@@ -40,7 +44,6 @@ export async function adminEmail(env: Env, request: Request): Promise<string | n
     if (!ok) return null;
     const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
     if (!aud.includes(env.ACCESS_AUD)) return null;
-    if (payload.iss !== `https://${team}`) return null;
     if (typeof payload.exp !== 'number' || payload.exp * 1000 < Date.now()) return null;
     const email = String(payload.email || '').toLowerCase();
     return adminEmails(env).includes(email) ? email : null;

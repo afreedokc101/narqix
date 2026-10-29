@@ -12,7 +12,7 @@ migrations_dir = "migrations"
 # Public Turnstile site key. Secret key is set with `wrangler pages secret put TURNSTILE_SECRET_KEY`.
 TURNSTILE_SITE_KEY = "0x4AAAAAAFqAaxFLEXGMq5SU"
 # Cloudflare Access (Zero Trust) settings for /admin. See README "Admin dashboard".
-ACCESS_TEAM_DOMAIN = ""
+ACCESS_TEAM_DOMAIN = "narqix.cloudflareaccess.com,throbbing-forest-59ea.cloudflareaccess.com"
 ACCESS_AUD = "53b28301341d1b4589e96fae7308667b659ec5ccc8ac1ee8416c8d6a95af2499"
 ADMIN_EMAILS = "afreed@narqix.com,ayman@narqix.com,sakib@narqix.com,hiring@narqix.com"
 # Email login codes via Resend (free tier). Leave empty to use phone + password login.
