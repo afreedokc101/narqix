@@ -1,9 +1,16 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { trackList } from '../../lib/data';
+// The Cloudflare Access login only works on the pages.dev address (narqix.com's DNS is not on Cloudflare).
+const ADMIN_LOGIN_URL = 'https://narqix-academy.pages.dev/admin/';
 ---
 <Base title="Hiring team" noindex>
-  <div class="wrap py-8" data-admin>
+  <div class="wrap py-24 text-center" data-gate hidden>
+    <h1 class="text-4xl sm:text-6xl">Hiring team access only.</h1>
+    <p class="mt-4 text-xl sm:text-2xl text-muted">Sign in through Cloudflare Access at /admin.</p>
+    <a class="btn btn-primary mt-10" href={ADMIN_LOGIN_URL}>Log in as admin</a>
+  </div>
+  <div class="wrap py-8" data-admin hidden>
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p class="eyebrow">Hiring team</p>
@@ -94,6 +101,12 @@ import { trackList } from '../../lib/data';
 
   (async () => {
     const r = await api('/api/admin/candidates');
+    if (r.status === 401 || r.status === 403) {
+      // Not an allowed admin: show only the sign-in message, never the dashboard.
+      (document.querySelector('[data-gate]') as HTMLElement).hidden = false;
+      return;
+    }
+    (document.querySelector('[data-admin]') as HTMLElement).hidden = false;
     if (!r.ok) {
       const el = document.querySelector('[data-error]') as HTMLElement;
       el.textContent = r.data.error || 'Could not load candidates.';
