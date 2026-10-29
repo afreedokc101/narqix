@@ -187,7 +187,7 @@ Notes:
   - `narqix-academy.pages.dev`, path `api/admin`
   - `academy.narqix.com`, path `admin` (only if narqix.com's DNS is on Cloudflare)
   - `academy.narqix.com`, path `api/admin` (same condition)
-- **Policy:** name it "Hiring team", action **Allow**, include **Emails**: `afreed@narqix.com`, `ayman.360va@gmail.com`, `hiring@narqix.com`.
+- **Policy:** name it "Hiring team", action **Allow**, include **Emails**: `afreed@narqix.com`, `ayman@narqix.com`, `sakib@narqix.com`, `hiring@narqix.com`.
 - **Login method:** One-time PIN (emailed code; works for any email address).
 
 **c) Copy the AUD.** After saving, open the application's **Overview**, copy the **Application Audience (AUD) Tag** and put it in `wrangler.toml`:

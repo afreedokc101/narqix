@@ -18,7 +18,7 @@ Right now the admin page is locked to everyone. This step lets three email addre
 5. On the **Policy** step:
    - **Name:** `Hiring team`
    - **Action:** Allow
-   - **Include → Emails:** `afreed@narqix.com`, `ayman.360va@gmail.com`, `hiring@narqix.com`
+   - **Include → Emails:** `afreed@narqix.com`, `ayman@narqix.com`, `sakib@narqix.com`, `hiring@narqix.com`
 6. On the login methods step, keep **One-time PIN**, then save.
 7. Open the app you just made. On its **Overview** tab, copy the long code labelled **Application Audience (AUD) Tag**.
 8. **Send Claude that code and your team name.** Claude adds them to `wrangler.toml` and redeploys. Both are safe to share.

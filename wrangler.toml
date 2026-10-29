@@ -14,7 +14,7 @@ TURNSTILE_SITE_KEY = "0x4AAAAAAFqAaxFLEXGMq5SU"
 # Cloudflare Access (Zero Trust) settings for /admin. See README "Admin dashboard".
 ACCESS_TEAM_DOMAIN = ""
 ACCESS_AUD = ""
-ADMIN_EMAILS = "afreed@narqix.com,ayman.360va@gmail.com,hiring@narqix.com"
+ADMIN_EMAILS = "afreed@narqix.com,ayman@narqix.com,sakib@narqix.com,hiring@narqix.com"
 # Email login codes via Resend (free tier). Leave empty to use phone + password login.
 # RESEND_API_KEY is a secret; EMAIL_FROM must be on a domain verified in Resend.
 EMAIL_FROM = ""

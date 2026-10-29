@@ -5,7 +5,7 @@ import type { Env } from './env';
 import { fromB64url } from './crypto';
 import { getCookie } from './auth';
 
-const DEFAULT_ADMINS = 'afreed@narqix.com,ayman.360va@gmail.com,hiring@narqix.com';
+const DEFAULT_ADMINS = 'afreed@narqix.com,ayman@narqix.com,sakib@narqix.com,hiring@narqix.com';
 let jwksCache: { at: number; keys: JsonWebKey[] } | null = null;
 
 async function jwks(team: string): Promise<JsonWebKey[]> {
