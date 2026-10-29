@@ -28,7 +28,7 @@ Until this is set up, nothing is emailed. The site still works: the hiring team 
 6. Store the key in Cloudflare yourself, so it never goes through chat:
    - Go to **Workers & Pages → narqix-academy → Settings → Variables and Secrets → Add**.
    - **Type:** Secret, **Name:** `RESEND_API_KEY`, **Value:** paste the key, then save.
-7. **Tell Claude it's done.** Claude sets the sender to `Narqix Academy <academy@narqix.com>` and redeploys.
+7. **Switch it on:** go to **Workers & Pages → narqix-academy → Deployments**, open the menu (⋯) on the top **Production** deployment and click **Retry deployment**. The sender address `Narqix Academy <academy@narqix.com>` is already set. You can also just tell Claude it's done.
 
 Bonus: this also turns on "email me a login code" for candidates who forget their password.
 
