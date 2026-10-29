@@ -29,7 +29,7 @@ export async function findCertificate(env: Env, rawId: string): Promise<PublicCe
     name: row.full_name,
     track: row.track,
     trackTitle: t,
-    title: `Narqix Academy Pre-Certified — ${t}`,
+    title: `Narqix Academy Pre-Certified: ${t}`,
     issuedAt: row.issued_at,
     foundationScore: row.foundation_score,
     trackScore: row.track_score,

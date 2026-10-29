@@ -1,16 +1,42 @@
-// Automated emails, sent through Resend. When RESEND_API_KEY or EMAIL_FROM is not set, nothing is sent
-// (the site still works; the hiring team just isn't notified).
+// Automated emails. They go out through the narqix.com mailbox on Hostinger (SMTP) when SMTP_PASSWORD is set,
+// otherwise through Resend when RESEND_API_KEY is set. With neither, nothing is sent: the site still works,
+// and the hiring team checks the dashboard.
+import { WorkerMailer } from 'worker-mailer';
 import type { Env } from './env';
 
 const SIGN_OFF = '\n\nThe Narqix Academy hiring team\n\n© Narqix Academy';
 
 export function emailEnabled(env: Env): boolean {
-  return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+  return Boolean(env.EMAIL_FROM && (env.SMTP_PASSWORD || env.RESEND_API_KEY));
+}
+
+/** "Narqix Academy <hiring@narqix.com>" -> { name, email } */
+function parseFrom(from: string): { name?: string; email: string } {
+  const m = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  return m ? { name: m[1] || undefined, email: m[2] } : { email: from.trim() };
+}
+
+async function sendSmtp(env: Env, to: string[], subject: string, text: string): Promise<boolean> {
+  const from = parseFrom(env.EMAIL_FROM!);
+  const port = Number(env.SMTP_PORT || 465);
+  await WorkerMailer.send(
+    {
+      host: env.SMTP_HOST || 'smtp.hostinger.com',
+      port,
+      secure: env.SMTP_SECURE ? env.SMTP_SECURE === 'true' : port === 465,
+      startTls: port === 587,
+      credentials: { username: env.SMTP_USER || from.email, password: env.SMTP_PASSWORD! },
+      authType: ['plain', 'login'],
+    },
+    { from, to: to.map((email) => ({ email })), subject, text },
+  );
+  return true;
 }
 
 export async function sendEmail(env: Env, to: string[], subject: string, text: string): Promise<boolean> {
   if (!emailEnabled(env) || !to.length) return false;
   try {
+    if (env.SMTP_PASSWORD) return await sendSmtp(env, to, subject, text);
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },

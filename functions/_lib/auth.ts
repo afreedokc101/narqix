@@ -1,5 +1,6 @@
 import type { Env } from './env';
 import { b64url, randomBytes, sha256 } from './crypto';
+import { emailEnabled, sendEmail } from './email';
 
 const SESSION_DAYS = 30;
 
@@ -90,19 +91,10 @@ export async function rateLimit(env: Env, key: string, limit: number, windowSec:
 }
 
 export function emailLoginEnabled(env: Env): boolean {
-  return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+  return emailEnabled(env);
 }
 
 export async function sendLoginCode(env: Env, to: string, code: string): Promise<boolean> {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      from: env.EMAIL_FROM,
-      to: [to],
-      subject: `Your Narqix Academy code: ${code}`,
-      text: `Your Narqix Academy login code is ${code}\n\nIt expires in 10 minutes. If you did not ask for it, ignore this email.\n\n© Narqix Academy`,
-    }),
-  });
-  return res.ok;
+  return sendEmail(env, [to], `Your Narqix Academy code: ${code}`,
+    `Your Narqix Academy login code is ${code}\n\nIt expires in 10 minutes. If you did not ask for it, ignore this email.\n\n© Narqix Academy`);
 }

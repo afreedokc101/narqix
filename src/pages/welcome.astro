@@ -9,8 +9,12 @@ import Base from '../layouts/Base.astro';
       <h1 class="mt-2 text-3xl sm:text-4xl" data-title>Welcome to Narqix Academy</h1>
 
       <div data-state="pending_nda" hidden>
-        <p class="mt-4 text-lg text-muted">You're one step away from your training. Upload the NDA you signed after applying, and our hiring team will review it, usually within 1 to 2 working days.</p>
-        <p class="mt-3 text-muted">We'll email you the moment your Academy access opens.</p>
+        <p class="mt-4 text-lg text-muted">You're one step away from your training. Before we open your Academy, we need a signed copy of our non-disclosure agreement (NDA).</p>
+        <ol class="mt-6 grid gap-3">
+          <li class="card p-4 flex flex-wrap items-center justify-between gap-3"><span><strong>1. Download the NDA</strong> and read it.</span><a class="btn btn-ghost btn-sm" href="/narqix-academy-nda.pdf" download>Download NDA (PDF)</a></li>
+          <li class="card p-4"><strong>2. Sign and date it.</strong> Sign it digitally, or print it, sign by hand and take a clear photo or scan of every page.</li>
+          <li class="card p-4"><strong>3. Upload it below.</strong> Our hiring team reviews it, usually within 1 to 2 working days, and emails you the moment your access opens.</li>
+        </ol>
       </div>
 
       <div data-state="nda_submitted" hidden>
@@ -34,7 +38,7 @@ import Base from '../layouts/Base.astro';
         <button class="btn btn-primary" type="submit" data-submit>Upload signed NDA</button>
       </form>
 
-      <p class="mt-8 text-sm text-muted">Can't find the NDA? It's in the email we sent after you applied. Questions: <a href="mailto:hiring@narqix.com">hiring@narqix.com</a></p>
+      <p class="mt-8 text-sm text-muted">Need the NDA again? <a href="/narqix-academy-nda.pdf" download>Download it here</a>. Questions: <a href="mailto:hiring@narqix.com">hiring@narqix.com</a></p>
       <p class="mt-2"><button class="btn btn-ghost btn-sm" data-logout>Log out</button></p>
     </div>
   </div>

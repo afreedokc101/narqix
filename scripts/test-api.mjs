@@ -134,7 +134,10 @@ async function main() {
   const anonPage = await new Client().req('/dashboard/');
   check('logged-out visitors are sent to log in', anonPage.status === 302 && anonPage.headers.get('location').startsWith('/login/?next='), anonPage.headers.get('location'));
   check('home page stays public', (await new Client().req('/')).status === 200);
-  check('welcome page loads', (await nina.req('/welcome/')).status === 200);
+  const welcome = await nina.req('/welcome/');
+  check('welcome page loads and links the NDA download', welcome.status === 200 && welcome.text.includes('/narqix-academy-nda.pdf'));
+  const ndaPdf = await new Client().req('/narqix-academy-nda.pdf');
+  check('blank NDA PDF is downloadable', ndaPdf.status === 200 && ndaPdf.text.startsWith('%PDF'));
   check('non-PDF/image upload is rejected', (await nina.upload('/api/nda', new TextEncoder().encode('<script>alert(1)</script>'), 'nda.pdf', 'application/pdf')).status === 415);
   check('upload over 10 MB is rejected', (await nina.upload('/api/nda', new Uint8Array(10 * 1024 * 1024 + 1).fill(0x25), 'big.pdf', 'application/pdf')).status === 413);
   const big = new Uint8Array(3_200_000);
@@ -271,7 +274,7 @@ async function main() {
   const cert = me1.data.certificates[0];
   check('certificate issued for Back Office', me1.data.certificates.length === 1 && cert.track === 'back-office' && /^NQX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cert.id), me1.data.certificates);
   const v = await new Client().req(`/api/verify/${cert.id}`);
-  check('public verify API returns name, track, date, scores, status', v.data.name === 'Bob Hossain' && v.data.title === 'Narqix Academy Pre-Certified — Back Office & Admin' && v.data.foundationScore === '40/40' && v.data.trackScore === '24/30' && v.data.status === 'valid', v.data);
+  check('public verify API returns name, track, date, scores, status', v.data.name === 'Bob Hossain' && v.data.title === 'Narqix Academy Pre-Certified: Back Office & Admin' && v.data.foundationScore === '40/40' && v.data.trackScore === '24/30' && v.data.status === 'valid', v.data);
   const vp = await new Client().req(`/verify/${cert.id}`);
   check('/verify/<id> page renders the certificate', vp.status === 200 && vp.text.includes('Bob Hossain') && vp.text.includes('Valid') && !vp.text.includes('data-cert="missing"'));
   check('/verify/<id> shows the pre-certification small print', vp.text.includes('Role-play and live certification are completed after hiring.'));

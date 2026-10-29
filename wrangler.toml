@@ -15,7 +15,7 @@ TURNSTILE_SITE_KEY = "0x4AAAAAAFqAaxFLEXGMq5SU"
 ACCESS_TEAM_DOMAIN = "narqix.cloudflareaccess.com,throbbing-forest-59ea.cloudflareaccess.com"
 ACCESS_AUD = "53b28301341d1b4589e96fae7308667b659ec5ccc8ac1ee8416c8d6a95af2499"
 ADMIN_EMAILS = "afreed@narqix.com,ayman@narqix.com,sakib@narqix.com,hiring@narqix.com"
-# Email login codes via Resend (free tier). Leave empty to use phone + password login.
-# RESEND_API_KEY is a secret; EMAIL_FROM must be on a domain verified in Resend.
-EMAIL_FROM = "Narqix Academy <academy@narqix.com>"
+# Sender of all automated emails (NDA updates, approvals, login codes). Emails go out through this
+# Hostinger mailbox once its password is stored as the Pages secret SMTP_PASSWORD (or via Resend with RESEND_API_KEY).
+EMAIL_FROM = "Narqix Academy <hiring@narqix.com>"
 SITE_URL = "https://academy.narqix.com"

@@ -59,7 +59,7 @@ How exams behave:
 - The timer runs on the server. Answers autosave, and when time runs out the saved answers are graded.
 - Retakes: earliest 2 days after a fail, at most 3 attempts per exam in any 30 days.
 - After grading, the candidate sees their score, pass/fail and the lesson to reread for each missed question, never the correct letter.
-- Passing Foundation plus a Track exam issues "Narqix Academy Pre-Certified — &lt;Track&gt;" with a public `/verify/<id>` page and a PDF generated in the browser.
+- Passing Foundation plus a Track exam issues "Narqix Academy Pre-Certified: &lt;Track&gt;" with a public `/verify/<id>` page and a PDF generated in the browser.
 
 ---
 
@@ -299,14 +299,14 @@ Remove someone the same way, from both places.
 
 New candidates can't open any lessons, tracks, exams or their dashboard until the hiring team approves their signed NDA:
 
-1. **Apply:** the candidate applies through the Google Form, and `scripts/google-form-nda-email.gs` emails them the NDA. Setup steps are in `FINISH-SETUP.md`.
-2. **Sign up:** after creating an account, the candidate lands on `/welcome/` and uploads the signed NDA (PDF, JPG or PNG, up to 10 MB). The file is stored in D1, in `nda_files` and `nda_chunks`.
+1. **Apply:** the candidate creates an account at `/signup/`. That account is the application.
+2. **Sign the NDA:** the candidate lands on `/welcome/`, downloads `/narqix-academy-nda.pdf`, signs it and uploads it (PDF, JPG or PNG, up to 10 MB). The file is stored in D1, in `nda_files` and `nda_chunks`.
 3. **Review:** the hiring team sees **NDA to review** in `/admin/`, opens the file, and clicks **Approve** or **Reject**. A rejection needs a reason, which the candidate sees and receives by email. An approval can be revoked later.
 4. **Access:** an approved candidate gets an email, and lessons and exams open.
 
 Access states are `pending_nda`, `nda_submitted`, `approved` and `rejected`, kept in `candidates.access_status`. Every change is logged in `status_history` as `access:<state>`. The pages are locked by `functions/_middleware.ts`, and the candidate APIs check the same rule themselves.
 
-Emails go out through Resend once `RESEND_API_KEY` and `EMAIL_FROM` are set (README step 8). "New NDA to review" alerts go to `ADMIN_EMAILS`, or to `NDA_NOTIFY_EMAILS` if that's set in `wrangler.toml`.
+Emails go out from the `EMAIL_FROM` mailbox (hiring@narqix.com on Hostinger) once its password is stored as the Pages secret `SMTP_PASSWORD`. Resend (`RESEND_API_KEY`) still works as an alternative. To change the NDA, edit `docs/nda/nda.html` and run `node scripts/build-nda.mjs`; `node scripts/preview-certificate.mjs` makes a sample certificate. "New NDA to review" alerts go to `ADMIN_EMAILS`, or to `NDA_NOTIFY_EMAILS` if that's set in `wrangler.toml`.
 
 ## Hiring team dashboard
 

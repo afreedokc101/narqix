@@ -206,7 +206,7 @@ export async function expireIfNeeded(env: Env, attempt: AttemptRow, now = Date.n
   return attempt;
 }
 
-/** Foundation + a Track exam passed => "Narqix Academy Pre-Certified — <Track>". */
+/** Foundation + a Track exam passed => "Narqix Academy Pre-Certified: <Track>". */
 export async function issueCertificates(env: Env, candidateId: string): Promise<void> {
   const passed = (
     await env.DB.prepare(`SELECT * FROM exam_attempts WHERE candidate_id = ? AND status = 'passed' ORDER BY submitted_at`).bind(candidateId).all<AttemptRow>()

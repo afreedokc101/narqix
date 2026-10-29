@@ -7,6 +7,12 @@ export interface Env {
   ACCESS_AUD?: string;
   ADMIN_EMAILS?: string;
   RESEND_API_KEY?: string;
+  /** Password of the EMAIL_FROM mailbox. When set, emails go out by SMTP (Hostinger by default) instead of Resend. */
+  SMTP_PASSWORD?: string;
+  SMTP_HOST?: string;
+  SMTP_PORT?: string;
+  SMTP_USER?: string;
+  SMTP_SECURE?: string;
   EMAIL_FROM?: string;
   /** Comma-separated addresses alerted when a candidate uploads an NDA. Defaults to ADMIN_EMAILS. */
   NDA_NOTIFY_EMAILS?: string;
