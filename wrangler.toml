@@ -13,7 +13,7 @@ migrations_dir = "migrations"
 TURNSTILE_SITE_KEY = "0x4AAAAAAFqAaxFLEXGMq5SU"
 # Cloudflare Access (Zero Trust) settings for /admin. See README "Admin dashboard".
 ACCESS_TEAM_DOMAIN = ""
-ACCESS_AUD = ""
+ACCESS_AUD = "53b28301341d1b4589e96fae7308667b659ec5ccc8ac1ee8416c8d6a95af2499"
 ADMIN_EMAILS = "afreed@narqix.com,ayman@narqix.com,sakib@narqix.com,hiring@narqix.com"
 # Email login codes via Resend (free tier). Leave empty to use phone + password login.
 # RESEND_API_KEY is a secret; EMAIL_FROM must be on a domain verified in Resend.
